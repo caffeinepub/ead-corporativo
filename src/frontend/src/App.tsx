@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   createRouter,
   createRoute,
@@ -38,14 +38,19 @@ function AppLayout() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const redirectingRef = useRef(false);
 
   const isLoading =
     isInitializing ||
     (isAuthenticated && (profileLoading || adminLoading || approvedLoading));
 
+  // Reset redirect guard on every render so navigation is always responsive
+  redirectingRef.current = false;
+
   useEffect(() => {
     if (!isAuthenticated) return;
     if (isLoading) return;
+    if (redirectingRef.current) return;
 
     const publicPaths = ["/validate"];
     const isPublicPath = publicPaths.some((p) =>
@@ -54,12 +59,16 @@ function AppLayout() {
     if (isPublicPath) return;
 
     if (!profile) {
-      if (location.pathname !== "/register") navigate({ to: "/register" });
+      if (location.pathname !== "/register") {
+        redirectingRef.current = true;
+        navigate({ to: "/register" });
+      }
       return;
     }
 
     const localProfile = getLocalProfile(principal);
     if (!localProfile && location.pathname !== "/register") {
+      redirectingRef.current = true;
       navigate({ to: "/register" });
       return;
     }
@@ -70,13 +79,17 @@ function AppLayout() {
         location.pathname === "/register" ||
         location.pathname === "/pending"
       ) {
+        redirectingRef.current = true;
         navigate({ to: "/admin" });
       }
       return;
     }
 
     if (!isApproved) {
-      if (location.pathname !== "/pending") navigate({ to: "/pending" });
+      if (location.pathname !== "/pending") {
+        redirectingRef.current = true;
+        navigate({ to: "/pending" });
+      }
       return;
     }
 
@@ -85,6 +98,7 @@ function AppLayout() {
       location.pathname === "/register" ||
       location.pathname === "/pending"
     ) {
+      redirectingRef.current = true;
       navigate({ to: "/dashboard" });
     }
   }, [
@@ -98,7 +112,7 @@ function AppLayout() {
     principal,
   ]);
 
-  if (isLoading && isAuthenticated && location.pathname !== "/") {
+  if (isLoading && isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

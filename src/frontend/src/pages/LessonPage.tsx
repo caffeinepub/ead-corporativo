@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useNavigate, useParams } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import AppHeader from "../components/AppHeader";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -13,6 +12,7 @@ import {
   generateCertCode,
   isCourseComplete,
 } from "../lib/ead-storage";
+import { navigate } from "../App";
 import type { Course, Lesson } from "../lib/ead-types";
 import {
   ChevronLeft,
@@ -25,6 +25,11 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+
+interface LessonPageProps {
+  courseId: string;
+  lessonId: string;
+}
 
 function getYouTubeVideoId(url: string): string | null {
   const patterns = [
@@ -44,12 +49,10 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export default function LessonPage() {
-  const { courseId, lessonId } = useParams({ from: "/app/lesson/$courseId/$lessonId" });
+export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
   const { identity } = useInternetIdentity();
   const principal = identity?.getPrincipal().toString() ?? "";
   const { data: profile } = useUserProfile();
-  const navigate = useNavigate();
 
   const [course, setCourse] = useState<Course | null>(null);
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -117,7 +120,7 @@ export default function LessonPage() {
       setSecondsWatched((prev) => {
         if (!lesson) return prev;
         const newVal = prev + 1;
-        updateLessonProgress(principal, lessonId!, newVal, lesson.duration);
+        updateLessonProgress(principal, lessonId, newVal, lesson.duration);
         if (newVal >= lesson.duration) {
           setIsCompleted(true);
           setIsPlaying(false);
@@ -194,7 +197,7 @@ export default function LessonPage() {
         {/* Breadcrumb */}
         <button
           type="button"
-          onClick={() => navigate({ to: "/course/$id", params: { id: courseId } })}
+          onClick={() => navigate(`/course/${courseId}`)}
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -326,12 +329,7 @@ export default function LessonPage() {
                   <p className="text-sm font-medium">{nextLesson.title}</p>
                 </div>
                 <Button
-                  onClick={() =>
-                    navigate({
-                    to: "/lesson/$courseId/$lessonId",
-                    params: { courseId: courseId, lessonId: nextLesson.id },
-                  })
-                  }
+                  onClick={() => navigate(`/lesson/${courseId}/${nextLesson.id}`)}
                   style={{ background: "oklch(var(--navy-deep))", color: "white" }}
                   className="gap-2 shrink-0"
                 >
@@ -357,7 +355,7 @@ export default function LessonPage() {
                 </div>
                 <Button
                   variant="outline"
-                  onClick={() => navigate({ to: "/certificate/$id", params: { id: courseId } })}
+                  onClick={() => navigate(`/certificate/${courseId}`)}
                   className="gap-2 shrink-0 border-none"
                   style={{
                     background: "oklch(0.38 0.14 165)",
@@ -393,10 +391,7 @@ export default function LessonPage() {
                       <button
                         key={l.id}
                         type="button"
-                        onClick={() =>                         navigate({
-                        to: "/lesson/$courseId/$lessonId",
-                        params: { courseId: courseId, lessonId: l.id },
-                      })}
+                        onClick={() => navigate(`/lesson/${courseId}/${l.id}`)}
                         className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-left text-sm transition-colors ${
                           current
                             ? "bg-primary/10 text-primary font-medium"

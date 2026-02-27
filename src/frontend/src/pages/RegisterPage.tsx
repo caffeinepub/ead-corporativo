@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +13,7 @@ import { toast } from "sonner";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useSaveProfile, useRequestApproval } from "../hooks/useQueries";
 import { saveLocalProfile } from "../lib/ead-storage";
-import { useActor } from "../hooks/useActor";
+import { useQueryClient } from "@tanstack/react-query";
 import { GraduationCap, Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
@@ -22,8 +21,7 @@ export default function RegisterPage() {
   const principal = identity?.getPrincipal().toString() ?? "";
   const saveProfile = useSaveProfile();
   const requestApproval = useRequestApproval();
-  const { actor } = useActor();
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [form, setForm] = useState({
     name: "",
@@ -44,16 +42,6 @@ export default function RegisterPage() {
     }
 
     try {
-      // Try to initialize access control — if this is the first user,
-      // they will be assigned as admin automatically
-      if (actor) {
-        try {
-          await (actor as any)._initializeAccessControlWithSecret("");
-        } catch {
-          // Silently ignore — may fail if user is already registered
-        }
-      }
-
       // Save profile to backend (name only)
       await saveProfile.mutateAsync(form.name.trim());
 
@@ -64,26 +52,24 @@ export default function RegisterPage() {
         company: form.company.trim(),
       });
 
-      // Check if the user became an admin (first user scenario)
-      let isAdmin = false;
-      if (actor) {
-        try {
-          isAdmin = await actor.isCallerAdmin();
-        } catch {
-          // Silently ignore
-        }
+      // Request approval for non-admin users (backend determines if admin)
+      try {
+        await requestApproval.mutateAsync();
+      } catch {
+        // May already have a pending request or user is admin — ignore
       }
 
-      if (isAdmin) {
-        toast.success("Bem-vindo, Administrador!");
-        navigate({ to: "/admin" });
-      } else {
-        // Request approval for regular users
-        await requestApproval.mutateAsync();
-        toast.success("Cadastro realizado! Aguardando aprovação.");
-        navigate({ to: "/pending" });
-      }
-    } catch {
+      // Invalidate all relevant queries so AppLayout can detect the new state
+      // and handle navigation automatically — no manual navigate() call here
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["userProfile"] }),
+        queryClient.invalidateQueries({ queryKey: ["isAdmin"] }),
+        queryClient.invalidateQueries({ queryKey: ["isApproved"] }),
+      ]);
+
+      toast.success("Cadastro realizado com sucesso!");
+    } catch (err) {
+      console.error("Erro no cadastro:", err);
       toast.error("Erro ao salvar cadastro. Tente novamente.");
     }
   };

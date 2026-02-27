@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-
 import AppHeader from "../components/AppHeader";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useUserProfile } from "../hooks/useQueries";
@@ -9,15 +7,18 @@ import {
   getCertificateForStudent,
   getLocalProfile,
 } from "../lib/ead-storage";
+import { navigate } from "../App";
 import type { Certificate } from "../lib/ead-types";
 import { Printer, ArrowLeft, Award } from "lucide-react";
 
-export default function CertificatePage() {
-  const { id: courseId } = useParams({ from: "/app/certificate/$id" });
+interface CertificatePageProps {
+  certId: string;
+}
+
+export default function CertificatePage({ certId: courseId }: CertificatePageProps) {
   const { identity } = useInternetIdentity();
   const principal = identity?.getPrincipal().toString() ?? "";
   const { data: profile } = useUserProfile();
-  const navigate = useNavigate();
   const printRef = useRef<HTMLDivElement>(null);
 
   const [cert, setCert] = useState<Certificate | null>(null);
@@ -40,7 +41,7 @@ export default function CertificatePage() {
   };
 
   const validationUrl = cert
-    ? `${window.location.origin}/validate/${cert.code}`
+    ? `${window.location.origin}/#/validate/${cert.code}`
     : "";
 
   const completionDate = cert
@@ -63,7 +64,7 @@ export default function CertificatePage() {
           <Button
             variant="outline"
             className="mt-4"
-            onClick={() => navigate({ to: "/course/$id", params: { id: courseId } })}
+            onClick={() => navigate(`/course/${courseId}`)}
           >
             Voltar ao curso
           </Button>
@@ -83,7 +84,7 @@ export default function CertificatePage() {
         <div className="flex items-center justify-between mb-6 print:hidden">
           <button
             type="button"
-            onClick={() => navigate({ to: "/course/$id", params: { id: courseId } })}
+            onClick={() => navigate(`/course/${courseId}`)}
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />

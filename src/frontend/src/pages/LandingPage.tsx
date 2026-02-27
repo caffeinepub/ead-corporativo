@@ -1,18 +1,9 @@
-import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { Loader2, GraduationCap, Shield, BarChart3, Award, Play } from "lucide-react";
 
 export default function LandingPage() {
-  const { login, isLoggingIn, identity, isInitializing } = useInternetIdentity();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (identity) {
-      navigate({ to: "/dashboard" });
-    }
-  }, [identity, navigate]);
+  const { login, isLoggingIn, isInitializing } = useInternetIdentity();
 
   const features = [
     {

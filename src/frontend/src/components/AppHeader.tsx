@@ -1,4 +1,3 @@
-import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +9,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useIsAdmin } from "../hooks/useQueries";
+import { navigate } from "../App";
 import { GraduationCap, LayoutDashboard, ShieldCheck, LogOut, ChevronDown } from "lucide-react";
 
 interface AppHeaderProps {
@@ -19,7 +19,6 @@ interface AppHeaderProps {
 export default function AppHeader({ userName }: AppHeaderProps) {
   const { clear } = useInternetIdentity();
   const { data: isAdmin } = useIsAdmin();
-  const navigate = useNavigate();
 
   const initials = userName
     ? userName
@@ -32,7 +31,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
 
   const handleLogout = () => {
     clear();
-    navigate({ to: "/" });
+    navigate("/");
   };
 
   return (
@@ -44,7 +43,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
         {/* Logo */}
         <button
           type="button"
-          onClick={() => navigate({ to: isAdmin ? "/admin" : "/dashboard" })}
+          onClick={() => navigate(isAdmin ? "/admin" : "/dashboard")}
           className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
         >
           <div
@@ -67,7 +66,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate({ to: "/admin" })}
+              onClick={() => navigate("/admin")}
               className="text-muted-foreground hover:text-foreground gap-1.5"
             >
               <ShieldCheck className="h-4 w-4" />
@@ -77,7 +76,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate({ to: "/dashboard" })}
+              onClick={() => navigate("/dashboard")}
               className="text-muted-foreground hover:text-foreground gap-1.5"
             >
               <LayoutDashboard className="h-4 w-4" />
@@ -107,7 +106,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
           <DropdownMenuContent align="end" className="w-48">
             {isAdmin && (
               <>
-                <DropdownMenuItem onClick={() => navigate({ to: "/admin" })}>
+                <DropdownMenuItem onClick={() => navigate("/admin")}>
                   <ShieldCheck className="h-4 w-4 mr-2" />
                   Painel Admin
                 </DropdownMenuItem>
@@ -115,7 +114,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
               </>
             )}
             {!isAdmin && (
-              <DropdownMenuItem onClick={() => navigate({ to: "/dashboard" })}>
+              <DropdownMenuItem onClick={() => navigate("/dashboard")}>
                 <LayoutDashboard className="h-4 w-4 mr-2" />
                 Meus Cursos
               </DropdownMenuItem>

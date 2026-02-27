@@ -1,21 +1,21 @@
+import Map "mo:core/Map";
+import Text "mo:core/Text";
+import Runtime "mo:core/Runtime";
+import Array "mo:core/Array";
+import Time "mo:core/Time";
+import Principal "mo:core/Principal";
+import Iter "mo:core/Iter";
+import Order "mo:core/Order";
 import MixinAuthorization "authorization/MixinAuthorization";
 import MixinStorage "blob-storage/Mixin";
 import AccessControl "authorization/access-control";
-import UserApproval "user-approval/approval";
 import Storage "blob-storage/Storage";
-import Principal "mo:core/Principal";
-import Runtime "mo:core/Runtime";
-import Map "mo:core/Map";
-import Text "mo:core/Text";
-import Array "mo:core/Array";
-import Time "mo:core/Time";
-import Iter "mo:core/Iter";
-import Order "mo:core/Order";
+import UserApproval "user-approval/approval";
 
 actor {
+  // Repeat types for .wasm compatibility
   public type UserProfile = {
     name : Text;
-    // Other user metadata if needed
   };
 
   module UserProfile {
@@ -49,38 +49,29 @@ actor {
   let accessControlState = AccessControl.initState();
   let approvalState = UserApproval.initState(accessControlState);
 
-  include MixinAuthorization(accessControlState);
   include MixinStorage();
+  include MixinAuthorization(accessControlState);
 
+  // Profile Management
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
-    };
+    if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Anonymous principals cannot save profiles (must not occur!)") };
     userProfiles.add(caller, profile);
   };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view profiles");
-    };
     userProfiles.get(caller);
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own profile or admin can view all");
-    };
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view profiles");
+      Runtime.trap("Unauthorized: Can only view your own profile");
     };
     userProfiles.get(user);
   };
 
+  // Approval System
   public query ({ caller }) func isCallerApproved() : async Bool {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can check approval status");
-    };
-    AccessControl.hasPermission(accessControlState, caller, #admin) or UserApproval.isApproved(approvalState, caller);
+    UserApproval.isApproved(approvalState, caller) or AccessControl.hasPermission(accessControlState, caller, #admin);
   };
 
   public shared ({ caller }) func requestApproval() : async () {
@@ -104,6 +95,7 @@ actor {
     UserApproval.listApprovals(approvalState);
   };
 
+  // Data Storage
   public shared ({ caller }) func uploadData(id : Text, blob : Storage.ExternalBlob) : async () {
     if (not (UserApproval.isApproved(approvalState, caller) or AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only approved users or admins can upload data");
@@ -152,6 +144,6 @@ actor {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
       Runtime.trap("Unauthorized: Only admins can access all data");
     };
-    dataStore.values().toArray().sort();
+    dataStore.toArray().map<(Text, Data), Data>(func((_, data)) { data });
   };
 };

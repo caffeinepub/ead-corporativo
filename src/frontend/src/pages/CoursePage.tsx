@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "@tanstack/react-router";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import {
   generateCertCode,
   isCourseComplete,
 } from "../lib/ead-storage";
+import { navigate } from "../App";
 import type { Course, Module } from "../lib/ead-types";
 import {
   ChevronLeft,
@@ -28,32 +28,34 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+interface CoursePageProps {
+  courseId: string;
+}
+
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export default function CoursePage() {
-  const { id } = useParams({ from: "/app/course/$id" });
+export default function CoursePage({ courseId }: CoursePageProps) {
   const { identity } = useInternetIdentity();
   const principal = identity?.getPrincipal().toString() ?? "";
   const { data: profile } = useUserProfile();
-  const navigate = useNavigate();
 
   const [course, setCourse] = useState<Course | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [certIssued, setCertIssued] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
-    const c = getCourse(id);
+    if (!courseId) return;
+    const c = getCourse(courseId);
     setCourse(c);
     if (c) {
       // Expand all modules by default
       setExpandedModules(new Set(c.modules.map((m) => m.id)));
     }
-  }, [id]);
+  }, [courseId]);
 
   useEffect(() => {
     if (!course || !principal) return;
@@ -62,8 +64,6 @@ export default function CoursePage() {
 
     // Auto-issue certificate if course complete and not yet issued
     if (isCourseComplete(principal, course) && !cert && profile?.name) {
-      const localProfile = getProgress(principal); // just to check
-      void localProfile;
       const code = generateCertCode(principal, course.id);
       saveCertificate({
         code,
@@ -142,7 +142,7 @@ export default function CoursePage() {
         {/* Back */}
         <button
           type="button"
-          onClick={() => navigate({ to: "/dashboard" })}
+          onClick={() => navigate("/dashboard")}
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -204,13 +204,7 @@ export default function CoursePage() {
           {firstIncomplete && (
             <Button
               onClick={() =>
-                navigate({
-                  to: "/lesson/$courseId/$lessonId",
-                  params: {
-                    courseId: firstIncomplete!.courseId,
-                    lessonId: firstIncomplete!.lessonId,
-                  },
-                })
+                navigate(`/lesson/${firstIncomplete!.courseId}/${firstIncomplete!.lessonId}`)
               }
               style={{ background: "oklch(var(--navy-deep))", color: "white" }}
               className="gap-2"
@@ -222,7 +216,7 @@ export default function CoursePage() {
           {certIssued && (
             <Button
               variant="outline"
-              onClick={() => navigate({ to: "/certificate/$id", params: { id: course.id } })}
+              onClick={() => navigate(`/certificate/${course.id}`)}
               className="gap-2"
             >
               <Award className="h-4 w-4" />
@@ -292,10 +286,7 @@ export default function CoursePage() {
                           type="button"
                           disabled={!unlocked}
                           onClick={() =>
-                            navigate({
-                            to: "/lesson/$courseId/$lessonId",
-                            params: { courseId: course.id, lessonId: lesson.id },
-                          })
+                            navigate(`/lesson/${course.id}/${lesson.id}`)
                           }
                           className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >

@@ -1,18 +1,7 @@
-import { useEffect, useRef, startTransition } from "react";
-import {
-  createRouter,
-  createRoute,
-  createRootRoute,
-  RouterProvider,
-  Outlet,
-  Navigate,
-  useNavigate,
-  useLocation,
-} from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { useUserProfile, useIsAdmin, useIsApproved } from "./hooks/useQueries";
-import { getLocalProfile } from "./lib/ead-storage";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
@@ -25,86 +14,102 @@ import CertificatePage from "./pages/CertificatePage";
 import ValidateCertPage from "./pages/ValidateCertPage";
 import AdminPage from "./pages/AdminPage";
 
-// ── Route Tree ────────────────────────────────────────────────────────────────
+// ── Simple hash-based router (no library) ──────────────────────────────────
 
-function AppLayout() {
+function getHash(): string {
+  return window.location.hash.replace(/^#/, "") || "/";
+}
+
+function navigate(path: string) {
+  window.location.hash = path;
+}
+
+function useHash() {
+  const [hash, setHash] = useState(getHash);
+  useEffect(() => {
+    const handler = () => setHash(getHash());
+    window.addEventListener("hashchange", handler);
+    return () => window.removeEventListener("hashchange", handler);
+  }, []);
+  return hash;
+}
+
+// Export navigate for use in pages
+export { navigate };
+
+// ── Route matching helpers ────────────────────────────────────────────────────
+
+function matchPath(pattern: string, path: string): Record<string, string> | null {
+  const patternParts = pattern.split("/").filter(Boolean);
+  const pathParts = path.split("/").filter(Boolean);
+  if (patternParts.length !== pathParts.length) return null;
+  const params: Record<string, string> = {};
+  for (let i = 0; i < patternParts.length; i++) {
+    const p = patternParts[i];
+    if (p.startsWith(":")) {
+      params[p.slice(1)] = decodeURIComponent(pathParts[i]);
+    } else if (p !== pathParts[i]) {
+      return null;
+    }
+  }
+  return params;
+}
+
+// ── Auth Guard & Routing ──────────────────────────────────────────────────────
+
+function Router() {
   const { identity, isInitializing } = useInternetIdentity();
   const isAuthenticated = !!identity;
+  const path = useHash();
 
   const { data: profile, isLoading: profileLoading } = useUserProfile();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const { data: isApproved, isLoading: approvedLoading } = useIsApproved();
 
-  const navigate = useNavigate();
-  const location = useLocation();
-  const hasNavigatedRef = useRef(false);
-
   const isLoading =
     isInitializing ||
     (isAuthenticated && (profileLoading || adminLoading || approvedLoading));
 
+  // ── Navigation guard ────────────────────────────────────────────────────────
   useEffect(() => {
-    // Reset navigation guard when location changes (after navigation completes)
-    const _ = location.pathname; // read to satisfy exhaustive-deps
-    void _;
-    hasNavigatedRef.current = false;
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
     if (isLoading) return;
-    if (hasNavigatedRef.current) return;
 
-    const publicPaths = ["/validate"];
-    const isPublicPath = publicPaths.some((p) =>
-      location.pathname.startsWith(p)
-    );
-    if (isPublicPath) return;
+    // Public routes — always accessible
+    if (path.startsWith("/validate")) return;
 
-    let targetPath: string | null = null;
+    if (!isAuthenticated) {
+      // Not logged in: only allow landing page
+      if (path !== "/") navigate("/");
+      return;
+    }
 
+    // Logged in but no profile yet
     if (!profile) {
-      if (location.pathname !== "/register") {
-        targetPath = "/register";
-      }
-    } else if (isAdmin) {
-      if (
-        location.pathname === "/" ||
-        location.pathname === "/register" ||
-        location.pathname === "/pending"
-      ) {
-        targetPath = "/admin";
-      }
-    } else if (!isApproved) {
-      if (location.pathname !== "/pending") {
-        targetPath = "/pending";
-      }
-    } else if (
-      location.pathname === "/" ||
-      location.pathname === "/register" ||
-      location.pathname === "/pending"
-    ) {
-      targetPath = "/dashboard";
+      if (path !== "/register") navigate("/register");
+      return;
     }
 
-    if (targetPath) {
-      hasNavigatedRef.current = true;
-      const path = targetPath;
-      // Use startTransition to defer navigation outside React's render cycle
-      startTransition(() => {
-        navigate({ to: path as any });
-      });
+    // Admin
+    if (isAdmin) {
+      const adminAllowed = path.startsWith("/admin");
+      if (!adminAllowed) navigate("/admin");
+      return;
     }
-  }, [
-    isAuthenticated,
-    isLoading,
-    profile,
-    isAdmin,
-    isApproved,
-    location.pathname,
-    navigate,
-  ]);
 
+    // Not approved
+    if (!isApproved) {
+      if (path !== "/pending") navigate("/pending");
+      return;
+    }
+
+    // Approved student: redirect away from login/register/pending
+    const guestOnlyPaths = ["/", "/register", "/pending"];
+    if (guestOnlyPaths.includes(path)) {
+      navigate("/dashboard");
+    }
+  }, [isLoading, isAuthenticated, profile, isAdmin, isApproved, path]);
+
+  // ── Loading screen ──────────────────────────────────────────────────────────
   if (isLoading && isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -116,137 +121,61 @@ function AppLayout() {
     );
   }
 
-  return <Outlet />;
-}
+  // ── Render page based on current path ───────────────────────────────────────
 
-const rootRoute = createRootRoute({
-  component: () => (
-    <>
-      <Outlet />
-      <Toaster richColors position="top-right" />
-    </>
-  ),
-});
-
-const appLayoutRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  id: "app",
-  component: AppLayout,
-});
-
-const indexRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: "/",
-  component: LandingPage,
-});
-
-const registerRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: "/register",
-  component: function RegisterGuard() {
-    const { identity } = useInternetIdentity();
-    if (!identity) return <Navigate to="/" />;
-    return <RegisterPage />;
-  },
-});
-
-const pendingRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: "/pending",
-  component: function PendingGuard() {
-    const { identity } = useInternetIdentity();
-    if (!identity) return <Navigate to="/" />;
-    return <PendingPage />;
-  },
-});
-
-const dashboardRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: "/dashboard",
-  component: function DashboardGuard() {
-    const { identity } = useInternetIdentity();
-    if (!identity) return <Navigate to="/" />;
-    return <DashboardPage />;
-  },
-});
-
-const courseRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: "/course/$id",
-  component: function CourseGuard() {
-    const { identity } = useInternetIdentity();
-    if (!identity) return <Navigate to="/" />;
-    return <CoursePage />;
-  },
-});
-
-const lessonRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: "/lesson/$courseId/$lessonId",
-  component: function LessonGuard() {
-    const { identity } = useInternetIdentity();
-    if (!identity) return <Navigate to="/" />;
-    return <LessonPage />;
-  },
-});
-
-const certificateRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: "/certificate/$id",
-  component: function CertGuard() {
-    const { identity } = useInternetIdentity();
-    if (!identity) return <Navigate to="/" />;
-    return <CertificatePage />;
-  },
-});
-
-const validateRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: "/validate/$code",
-  component: ValidateCertPage,
-});
-
-const adminRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: "/admin",
-  component: function AdminGuard() {
-    const { identity } = useInternetIdentity();
-    if (!identity) return <Navigate to="/" />;
-    return <AdminPage />;
-  },
-});
-
-const catchAllRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: "*",
-  component: function CatchAll() {
-    return <Navigate to="/" />;
-  },
-});
-
-const routeTree = rootRoute.addChildren([
-  appLayoutRoute.addChildren([
-    indexRoute,
-    registerRoute,
-    pendingRoute,
-    dashboardRoute,
-    courseRoute,
-    lessonRoute,
-    certificateRoute,
-    validateRoute,
-    adminRoute,
-    catchAllRoute,
-  ]),
-]);
-
-const router = createRouter({ routeTree });
-
-declare module "@tanstack/react-router" {
-  interface Register {
-    router: typeof router;
+  // /validate/:code
+  const validateMatch = matchPath("/validate/:code", path);
+  if (validateMatch) {
+    return <ValidateCertPage code={validateMatch.code} />;
   }
+
+  if (path === "/" || path === "") {
+    return <LandingPage />;
+  }
+
+  if (path === "/register") {
+    return <RegisterPage />;
+  }
+
+  if (path === "/pending") {
+    return <PendingPage />;
+  }
+
+  if (path === "/dashboard") {
+    return <DashboardPage />;
+  }
+
+  // /course/:id
+  const courseMatch = matchPath("/course/:id", path);
+  if (courseMatch) {
+    return <CoursePage courseId={courseMatch.id} />;
+  }
+
+  // /lesson/:courseId/:lessonId
+  const lessonMatch = matchPath("/lesson/:courseId/:lessonId", path);
+  if (lessonMatch) {
+    return <LessonPage courseId={lessonMatch.courseId} lessonId={lessonMatch.lessonId} />;
+  }
+
+  // /certificate/:id
+  const certMatch = matchPath("/certificate/:id", path);
+  if (certMatch) {
+    return <CertificatePage certId={certMatch.id} />;
+  }
+
+  if (path === "/admin" || path.startsWith("/admin/")) {
+    return <AdminPage />;
+  }
+
+  // 404 fallback
+  return <LandingPage />;
 }
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <Router />
+      <Toaster richColors position="top-right" />
+    </>
+  );
 }

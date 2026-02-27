@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,6 +6,7 @@ import AppHeader from "../components/AppHeader";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useUserProfile } from "../hooks/useQueries";
 import { getCourses, calculateCourseProgress, getCertificateForStudent, startSession } from "../lib/ead-storage";
+import { navigate } from "../App";
 import { BookOpen, ChevronRight, Award, PlayCircle } from "lucide-react";
 import type { Course } from "../lib/ead-types";
 import { useState } from "react";
@@ -15,7 +15,6 @@ export default function DashboardPage() {
   const { identity } = useInternetIdentity();
   const principal = identity?.getPrincipal().toString() ?? "";
   const { data: profile, isLoading } = useUserProfile();
-  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
 
   useEffect(() => {
@@ -107,7 +106,7 @@ export default function DashboardPage() {
                 <button
                   key={course.id}
                   type="button"
-                  onClick={() => navigate({ to: "/course/$id", params: { id: course.id } })}
+                  onClick={() => navigate(`/course/${course.id}`)}
                   className={`w-full rounded-lg border border-border bg-card p-5 text-left hover:shadow-card-hover hover:border-primary/30 transition-all duration-200 group slide-up stagger-${Math.min(i + 2, 5)}`}
                   style={{ boxShadow: "0 1px 3px oklch(0.22 0.065 258 / 0.06)" }}
                 >

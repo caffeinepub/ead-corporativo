@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, startTransition } from "react";
 import {
   createRouter,
   createRoute,
@@ -30,7 +30,6 @@ import AdminPage from "./pages/AdminPage";
 function AppLayout() {
   const { identity, isInitializing } = useInternetIdentity();
   const isAuthenticated = !!identity;
-  const principal = identity?.getPrincipal().toString() ?? "";
 
   const { data: profile, isLoading: profileLoading } = useUserProfile();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
@@ -38,19 +37,23 @@ function AppLayout() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectingRef = useRef(false);
+  const hasNavigatedRef = useRef(false);
 
   const isLoading =
     isInitializing ||
     (isAuthenticated && (profileLoading || adminLoading || approvedLoading));
 
-  // Reset redirect guard on every render so navigation is always responsive
-  redirectingRef.current = false;
+  useEffect(() => {
+    // Reset navigation guard when location changes (after navigation completes)
+    const _ = location.pathname; // read to satisfy exhaustive-deps
+    void _;
+    hasNavigatedRef.current = false;
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     if (isLoading) return;
-    if (redirectingRef.current) return;
+    if (hasNavigatedRef.current) return;
 
     const publicPaths = ["/validate"];
     const isPublicPath = publicPaths.some((p) =>
@@ -58,48 +61,39 @@ function AppLayout() {
     );
     if (isPublicPath) return;
 
+    let targetPath: string | null = null;
+
     if (!profile) {
       if (location.pathname !== "/register") {
-        redirectingRef.current = true;
-        navigate({ to: "/register" });
+        targetPath = "/register";
       }
-      return;
-    }
-
-    const localProfile = getLocalProfile(principal);
-    if (!localProfile && location.pathname !== "/register") {
-      redirectingRef.current = true;
-      navigate({ to: "/register" });
-      return;
-    }
-
-    if (isAdmin) {
+    } else if (isAdmin) {
       if (
         location.pathname === "/" ||
         location.pathname === "/register" ||
         location.pathname === "/pending"
       ) {
-        redirectingRef.current = true;
-        navigate({ to: "/admin" });
+        targetPath = "/admin";
       }
-      return;
-    }
-
-    if (!isApproved) {
+    } else if (!isApproved) {
       if (location.pathname !== "/pending") {
-        redirectingRef.current = true;
-        navigate({ to: "/pending" });
+        targetPath = "/pending";
       }
-      return;
-    }
-
-    if (
+    } else if (
       location.pathname === "/" ||
       location.pathname === "/register" ||
       location.pathname === "/pending"
     ) {
-      redirectingRef.current = true;
-      navigate({ to: "/dashboard" });
+      targetPath = "/dashboard";
+    }
+
+    if (targetPath) {
+      hasNavigatedRef.current = true;
+      const path = targetPath;
+      // Use startTransition to defer navigation outside React's render cycle
+      startTransition(() => {
+        navigate({ to: path as any });
+      });
     }
   }, [
     isAuthenticated,
@@ -109,7 +103,6 @@ function AppLayout() {
     isApproved,
     location.pathname,
     navigate,
-    principal,
   ]);
 
   if (isLoading && isAuthenticated) {

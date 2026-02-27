@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import AppHeader from "../components/AppHeader";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -45,7 +45,7 @@ function formatTime(seconds: number): string {
 }
 
 export default function LessonPage() {
-  const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
+  const { courseId, lessonId } = useParams({ from: "/app/lesson/$courseId/$lessonId" });
   const { identity } = useInternetIdentity();
   const principal = identity?.getPrincipal().toString() ?? "";
   const { data: profile } = useUserProfile();
@@ -194,7 +194,7 @@ export default function LessonPage() {
         {/* Breadcrumb */}
         <button
           type="button"
-          onClick={() => navigate(`/course/${courseId}`)}
+          onClick={() => navigate({ to: "/course/$id", params: { id: courseId } })}
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -327,7 +327,10 @@ export default function LessonPage() {
                 </div>
                 <Button
                   onClick={() =>
-                    navigate(`/lesson/${courseId}/${nextLesson.id}`)
+                    navigate({
+                    to: "/lesson/$courseId/$lessonId",
+                    params: { courseId: courseId, lessonId: nextLesson.id },
+                  })
                   }
                   style={{ background: "oklch(var(--navy-deep))", color: "white" }}
                   className="gap-2 shrink-0"
@@ -354,7 +357,7 @@ export default function LessonPage() {
                 </div>
                 <Button
                   variant="outline"
-                  onClick={() => navigate(`/certificate/${courseId}`)}
+                  onClick={() => navigate({ to: "/certificate/$id", params: { id: courseId } })}
                   className="gap-2 shrink-0 border-none"
                   style={{
                     background: "oklch(0.38 0.14 165)",
@@ -390,7 +393,10 @@ export default function LessonPage() {
                       <button
                         key={l.id}
                         type="button"
-                        onClick={() => navigate(`/lesson/${courseId}/${l.id}`)}
+                        onClick={() =>                         navigate({
+                        to: "/lesson/$courseId/$lessonId",
+                        params: { courseId: courseId, lessonId: l.id },
+                      })}
                         className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-left text-sm transition-colors ${
                           current
                             ? "bg-primary/10 text-primary font-medium"

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { Loader2, GraduationCap, Shield, BarChart3, Award, Play } from "lucide-react";
@@ -10,7 +10,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (identity) {
-      navigate("/dashboard");
+      navigate({ to: "/dashboard" });
     }
   }, [identity, navigate]);
 

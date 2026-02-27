@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import {
-  BrowserRouter,
-  Routes,
-  Route,
+  createRouter,
+  createRoute,
+  createRootRoute,
+  RouterProvider,
+  Outlet,
   Navigate,
   useNavigate,
   useLocation,
-} from "react-router-dom";
+} from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { useUserProfile, useIsAdmin, useIsApproved } from "./hooks/useQueries";
@@ -23,7 +25,9 @@ import CertificatePage from "./pages/CertificatePage";
 import ValidateCertPage from "./pages/ValidateCertPage";
 import AdminPage from "./pages/AdminPage";
 
-function AppRouter() {
+// ── Route Tree ────────────────────────────────────────────────────────────────
+
+function AppLayout() {
   const { identity, isInitializing } = useInternetIdentity();
   const isAuthenticated = !!identity;
   const principal = identity?.getPrincipal().toString() ?? "";
@@ -37,38 +41,42 @@ function AppRouter() {
 
   const isLoading =
     isInitializing ||
-    (isAuthenticated &&
-      (profileLoading || adminLoading || approvedLoading));
+    (isAuthenticated && (profileLoading || adminLoading || approvedLoading));
 
   useEffect(() => {
     if (!isAuthenticated) return;
     if (isLoading) return;
 
     const publicPaths = ["/validate"];
-    const isPublicPath = publicPaths.some((p) => location.pathname.startsWith(p));
+    const isPublicPath = publicPaths.some((p) =>
+      location.pathname.startsWith(p)
+    );
     if (isPublicPath) return;
 
     if (!profile) {
-      if (location.pathname !== "/register") navigate("/register");
+      if (location.pathname !== "/register") navigate({ to: "/register" });
       return;
     }
 
-    // Check if local profile exists (CPF etc.)
     const localProfile = getLocalProfile(principal);
     if (!localProfile && location.pathname !== "/register") {
-      navigate("/register");
+      navigate({ to: "/register" });
       return;
     }
 
     if (isAdmin) {
-      if (location.pathname === "/" || location.pathname === "/register" || location.pathname === "/pending") {
-        navigate("/admin");
+      if (
+        location.pathname === "/" ||
+        location.pathname === "/register" ||
+        location.pathname === "/pending"
+      ) {
+        navigate({ to: "/admin" });
       }
       return;
     }
 
     if (!isApproved) {
-      if (location.pathname !== "/pending") navigate("/pending");
+      if (location.pathname !== "/pending") navigate({ to: "/pending" });
       return;
     }
 
@@ -77,9 +85,18 @@ function AppRouter() {
       location.pathname === "/register" ||
       location.pathname === "/pending"
     ) {
-      navigate("/dashboard");
+      navigate({ to: "/dashboard" });
     }
-  }, [isAuthenticated, isLoading, profile, isAdmin, isApproved, location.pathname, navigate, principal]);
+  }, [
+    isAuthenticated,
+    isLoading,
+    profile,
+    isAdmin,
+    isApproved,
+    location.pathname,
+    navigate,
+    principal,
+  ]);
 
   if (isLoading && isAuthenticated && location.pathname !== "/") {
     return (
@@ -92,54 +109,137 @@ function AppRouter() {
     );
   }
 
-  return (
-    <Routes>
-      {/* Public */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/validate/:code" element={<ValidateCertPage />} />
+  return <Outlet />;
+}
 
-      {/* Auth required */}
-      <Route
-        path="/register"
-        element={isAuthenticated ? <RegisterPage /> : <Navigate to="/" />}
-      />
-      <Route
-        path="/pending"
-        element={isAuthenticated ? <PendingPage /> : <Navigate to="/" />}
-      />
-      <Route
-        path="/dashboard"
-        element={isAuthenticated ? <DashboardPage /> : <Navigate to="/" />}
-      />
-      <Route
-        path="/course/:id"
-        element={isAuthenticated ? <CoursePage /> : <Navigate to="/" />}
-      />
-      <Route
-        path="/lesson/:courseId/:lessonId"
-        element={isAuthenticated ? <LessonPage /> : <Navigate to="/" />}
-      />
-      <Route
-        path="/certificate/:id"
-        element={isAuthenticated ? <CertificatePage /> : <Navigate to="/" />}
-      />
+const rootRoute = createRootRoute({
+  component: () => (
+    <>
+      <Outlet />
+      <Toaster richColors position="top-right" />
+    </>
+  ),
+});
 
-      {/* Admin */}
-      <Route
-        path="/admin"
-        element={isAuthenticated ? <AdminPage /> : <Navigate to="/" />}
-      />
+const appLayoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: "app",
+  component: AppLayout,
+});
 
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
-  );
+const indexRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/",
+  component: LandingPage,
+});
+
+const registerRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/register",
+  component: function RegisterGuard() {
+    const { identity } = useInternetIdentity();
+    if (!identity) return <Navigate to="/" />;
+    return <RegisterPage />;
+  },
+});
+
+const pendingRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/pending",
+  component: function PendingGuard() {
+    const { identity } = useInternetIdentity();
+    if (!identity) return <Navigate to="/" />;
+    return <PendingPage />;
+  },
+});
+
+const dashboardRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/dashboard",
+  component: function DashboardGuard() {
+    const { identity } = useInternetIdentity();
+    if (!identity) return <Navigate to="/" />;
+    return <DashboardPage />;
+  },
+});
+
+const courseRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/course/$id",
+  component: function CourseGuard() {
+    const { identity } = useInternetIdentity();
+    if (!identity) return <Navigate to="/" />;
+    return <CoursePage />;
+  },
+});
+
+const lessonRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/lesson/$courseId/$lessonId",
+  component: function LessonGuard() {
+    const { identity } = useInternetIdentity();
+    if (!identity) return <Navigate to="/" />;
+    return <LessonPage />;
+  },
+});
+
+const certificateRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/certificate/$id",
+  component: function CertGuard() {
+    const { identity } = useInternetIdentity();
+    if (!identity) return <Navigate to="/" />;
+    return <CertificatePage />;
+  },
+});
+
+const validateRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/validate/$code",
+  component: ValidateCertPage,
+});
+
+const adminRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/admin",
+  component: function AdminGuard() {
+    const { identity } = useInternetIdentity();
+    if (!identity) return <Navigate to="/" />;
+    return <AdminPage />;
+  },
+});
+
+const catchAllRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "*",
+  component: function CatchAll() {
+    return <Navigate to="/" />;
+  },
+});
+
+const routeTree = rootRoute.addChildren([
+  appLayoutRoute.addChildren([
+    indexRoute,
+    registerRoute,
+    pendingRoute,
+    dashboardRoute,
+    courseRoute,
+    lessonRoute,
+    certificateRoute,
+    validateRoute,
+    adminRoute,
+    catchAllRoute,
+  ]),
+]);
+
+const router = createRouter({ routeTree });
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
 }
 
 export default function App() {
-  return (
-    <BrowserRouter>
-      <AppRouter />
-      <Toaster richColors position="top-right" />
-    </BrowserRouter>
-  );
+  return <RouterProvider router={router} />;
 }

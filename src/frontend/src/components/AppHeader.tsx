@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,7 +32,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
 
   const handleLogout = () => {
     clear();
-    navigate("/");
+    navigate({ to: "/" });
   };
 
   return (
@@ -44,7 +44,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
         {/* Logo */}
         <button
           type="button"
-          onClick={() => navigate(isAdmin ? "/admin" : "/dashboard")}
+          onClick={() => navigate({ to: isAdmin ? "/admin" : "/dashboard" })}
           className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
         >
           <div
@@ -67,7 +67,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/admin")}
+              onClick={() => navigate({ to: "/admin" })}
               className="text-muted-foreground hover:text-foreground gap-1.5"
             >
               <ShieldCheck className="h-4 w-4" />
@@ -77,7 +77,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate({ to: "/dashboard" })}
               className="text-muted-foreground hover:text-foreground gap-1.5"
             >
               <LayoutDashboard className="h-4 w-4" />
@@ -107,7 +107,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
           <DropdownMenuContent align="end" className="w-48">
             {isAdmin && (
               <>
-                <DropdownMenuItem onClick={() => navigate("/admin")}>
+                <DropdownMenuItem onClick={() => navigate({ to: "/admin" })}>
                   <ShieldCheck className="h-4 w-4 mr-2" />
                   Painel Admin
                 </DropdownMenuItem>
@@ -115,7 +115,7 @@ export default function AppHeader({ userName }: AppHeaderProps) {
               </>
             )}
             {!isAdmin && (
-              <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+              <DropdownMenuItem onClick={() => navigate({ to: "/dashboard" })}>
                 <LayoutDashboard className="h-4 w-4 mr-2" />
                 Meus Cursos
               </DropdownMenuItem>

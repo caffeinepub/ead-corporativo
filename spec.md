@@ -1,54 +1,38 @@
 # EAD Corporativo
 
 ## Current State
-Projeto novo, sem código existente.
+
+A plataforma EAD já está construída com:
+- Login via Internet Identity
+- Cadastro de alunos (nome, CPF, telefone, empresa)
+- Aprovação manual pelo administrador
+- Player de vídeo com bloqueio de avanço
+- Painel administrativo completo
+- Relatórios PDF e certificados com QR Code
+
+O sistema usa `_initializeAccessControlWithSecret` para promover o primeiro usuário a admin, mas esse método **não está exposto** no `backend.d.ts` e **não é chamado** no fluxo de cadastro.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Sistema de autenticação com login/senha (e-mail + senha) com dois perfis: Aluno e Administrador
-- Tela de cadastro do aluno com campos: nome completo, CPF, e-mail, telefone, empresa, senha
-- Status inicial do aluno: "Aguardando aprovação administrativa"
-- Painel administrativo com gestão de alunos (aprovar, bloquear, excluir) e filtros por status
-- Painel administrativo com gestão de cursos: criar curso, módulos, upload de URL de vídeo, ordem obrigatória
-- Área do aluno: lista de módulos e aulas, barra de progresso, percentual de conclusão
-- Player de vídeo controlado: sem avanço manual, só pausa/continua, registra tempo assistido, libera próxima aula só após 100% da atual
-- Logs de acesso: data, horário entrada/saída, tempo total logado, tempo assistido por aula, identificador de sessão
-- Relatórios individuais no painel admin: nome, CPF, curso, datas/horários de acesso, tempo total, percentual de conclusão
-- Exportação de relatório em PDF (via jsPDF no frontend)
-- Certificado automático ao completar 100% do curso, com QR Code de validação
-- Design responsivo em azul escuro (#0D2B55) e branco, visual corporativo profissional
+- Chamar `_initializeAccessControlWithSecret` automaticamente no fluxo de cadastro, passando uma string vazia como token (o backend aceita qualquer valor quando não há admin ainda, desde que `adminAssigned = false`)
+- Verificação silenciosa: se falhar (admin já existe), ignorar o erro e continuar o cadastro normalmente
 
 ### Modify
-Nada (projeto novo).
+- `RegisterPage.tsx`: após salvar o perfil, tentar chamar `_initializeAccessControlWithSecret("")` antes de `requestApproval()`; se o usuário virar admin, redirecionar para `/admin` em vez de `/pending`
+- `useQueries.ts`: adicionar hook `useInitializeAdmin` que chama `_initializeAccessControlWithSecret`
 
 ### Remove
-Nada (projeto novo).
+- Nenhum
 
 ## Implementation Plan
-1. Backend Motoko:
-   - Entidades: User (id, name, cpf, email, phone, company, passwordHash, role, status), Course, Module, Lesson, AccessLog, LessonProgress, Certificate
-   - APIs: register, login, getUserProfile, listUsers (admin), approveUser, blockUser, deleteUser
-   - APIs: createCourse, updateCourse, listCourses, getCourse, createModule, createLesson, reorderLessons
-   - APIs: getLessonProgress, updateLessonProgress (com tempo assistido), completLesson
-   - APIs: logAccess (entrada/saída), getUserReport, listReports
-   - APIs: generateCertificate, validateCertificate (por QR Code)
-   - Controle de permissão por role (admin/student)
 
-2. Frontend React:
-   - Rota /login: tela com e-mail, senha, botões Entrar / Cadastrar-se / Esqueci minha senha
-   - Rota /register: formulário de cadastro do aluno
-   - Rota /pending: tela de aguardando aprovação
-   - Rota /dashboard (aluno): lista de cursos aprovados, progresso
-   - Rota /course/:id: módulos e aulas com player controlado
-   - Rota /certificate/:id: certificado com QR Code
-   - Rota /admin: painel admin com abas: Alunos, Cursos, Relatórios
-   - Player customizado: sem seekbar arrastável, barra de progresso só leitura, auto-avança quando 100%
-   - Exportação PDF via jsPDF
+1. Expor `_initializeAccessControlWithSecret` no `backend.d.ts` manualmente (adicionar à interface `backendInterface`)
+2. Adicionar hook `useInitializeAdmin` em `useQueries.ts`
+3. Modificar `RegisterPage.tsx` para chamar o hook e, se o usuário virar admin, redirecionar para `/admin`
 
 ## UX Notes
-- Cores: azul escuro #0D2B55 como primária, branco como fundo/texto, accent azul médio #1E5FAD
-- Tipografia limpa, espaçamentos generosos, visual corporativo
-- Mobile-first, totalmente responsivo
-- Mensagem clara para alunos aguardando aprovação
-- Certificado imprimível com QR Code que valida autenticidade
+
+- O fluxo é transparente: o usuário não percebe a tentativa de inicialização
+- Se já houver admin, o usuário segue o fluxo normal (aguarda aprovação)
+- Apenas o primeiro usuário a se cadastrar vira admin automaticamente

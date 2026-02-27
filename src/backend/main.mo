@@ -7,9 +7,9 @@ import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 import Map "mo:core/Map";
 import Text "mo:core/Text";
-import Iter "mo:core/Iter";
-import Time "mo:core/Time";
 import Array "mo:core/Array";
+import Time "mo:core/Time";
+import Iter "mo:core/Iter";
 import Order "mo:core/Order";
 
 actor {
@@ -60,18 +60,33 @@ actor {
   };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view profiles");
+    };
     userProfiles.get(caller);
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Can only view your own profile or admin can view all");
+    };
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view profiles");
+    };
     userProfiles.get(user);
   };
 
   public query ({ caller }) func isCallerApproved() : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can check approval status");
+    };
     AccessControl.hasPermission(accessControlState, caller, #admin) or UserApproval.isApproved(approvalState, caller);
   };
 
   public shared ({ caller }) func requestApproval() : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can request approval");
+    };
     UserApproval.requestApproval(approvalState, caller);
   };
 

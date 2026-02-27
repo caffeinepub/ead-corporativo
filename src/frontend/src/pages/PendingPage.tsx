@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { Clock, LogOut, GraduationCap, RefreshCw } from "lucide-react";
@@ -11,7 +11,7 @@ export default function PendingPage() {
 
   const handleLogout = () => {
     clear();
-    navigate("/");
+    navigate({ to: "/" });
   };
 
   return (

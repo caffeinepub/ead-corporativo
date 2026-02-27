@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "@tanstack/react-router";
 import { getCertificateByCode } from "../lib/ead-storage";
 import type { Certificate } from "../lib/ead-types";
 import { CheckCircle, XCircle, Award, GraduationCap } from "lucide-react";
 
 export default function ValidateCertPage() {
-  const { code } = useParams<{ code: string }>();
+  const { code } = useParams({ from: "/app/validate/$code" });
   const [cert, setCert] = useState<Certificate | null>(null);
   const [notFound, setNotFound] = useState(false);
 

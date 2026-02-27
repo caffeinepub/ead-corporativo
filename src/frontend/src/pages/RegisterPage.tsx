@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useSaveProfile, useRequestApproval } from "../hooks/useQueries";
 import { saveLocalProfile } from "../lib/ead-storage";
+import { useActor } from "../hooks/useActor";
 import { GraduationCap, Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
@@ -21,6 +22,7 @@ export default function RegisterPage() {
   const principal = identity?.getPrincipal().toString() ?? "";
   const saveProfile = useSaveProfile();
   const requestApproval = useRequestApproval();
+  const { actor } = useActor();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -42,7 +44,17 @@ export default function RegisterPage() {
     }
 
     try {
-      // Save to backend (name only)
+      // Try to initialize access control — if this is the first user,
+      // they will be assigned as admin automatically
+      if (actor) {
+        try {
+          await (actor as any)._initializeAccessControlWithSecret("");
+        } catch {
+          // Silently ignore — may fail if user is already registered
+        }
+      }
+
+      // Save profile to backend (name only)
       await saveProfile.mutateAsync(form.name.trim());
 
       // Save extended profile to localStorage
@@ -52,11 +64,25 @@ export default function RegisterPage() {
         company: form.company.trim(),
       });
 
-      // Request approval
-      await requestApproval.mutateAsync();
+      // Check if the user became an admin (first user scenario)
+      let isAdmin = false;
+      if (actor) {
+        try {
+          isAdmin = await actor.isCallerAdmin();
+        } catch {
+          // Silently ignore
+        }
+      }
 
-      toast.success("Cadastro realizado! Aguardando aprovação.");
-      navigate("/pending");
+      if (isAdmin) {
+        toast.success("Bem-vindo, Administrador!");
+        navigate({ to: "/admin" });
+      } else {
+        // Request approval for regular users
+        await requestApproval.mutateAsync();
+        toast.success("Cadastro realizado! Aguardando aprovação.");
+        navigate({ to: "/pending" });
+      }
     } catch {
       toast.error("Erro ao salvar cadastro. Tente novamente.");
     }

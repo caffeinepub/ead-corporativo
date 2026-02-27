@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ function formatDuration(seconds: number): string {
 }
 
 export default function CoursePage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams({ from: "/app/course/$id" });
   const { identity } = useInternetIdentity();
   const principal = identity?.getPrincipal().toString() ?? "";
   const { data: profile } = useUserProfile();
@@ -142,7 +142,7 @@ export default function CoursePage() {
         {/* Back */}
         <button
           type="button"
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate({ to: "/dashboard" })}
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -204,9 +204,13 @@ export default function CoursePage() {
           {firstIncomplete && (
             <Button
               onClick={() =>
-                navigate(
-                  `/lesson/${firstIncomplete!.courseId}/${firstIncomplete!.lessonId}`
-                )
+                navigate({
+                  to: "/lesson/$courseId/$lessonId",
+                  params: {
+                    courseId: firstIncomplete!.courseId,
+                    lessonId: firstIncomplete!.lessonId,
+                  },
+                })
               }
               style={{ background: "oklch(var(--navy-deep))", color: "white" }}
               className="gap-2"
@@ -218,7 +222,7 @@ export default function CoursePage() {
           {certIssued && (
             <Button
               variant="outline"
-              onClick={() => navigate(`/certificate/${course.id}`)}
+              onClick={() => navigate({ to: "/certificate/$id", params: { id: course.id } })}
               className="gap-2"
             >
               <Award className="h-4 w-4" />
@@ -288,7 +292,10 @@ export default function CoursePage() {
                           type="button"
                           disabled={!unlocked}
                           onClick={() =>
-                            navigate(`/lesson/${course.id}/${lesson.id}`)
+                            navigate({
+                            to: "/lesson/$courseId/$lessonId",
+                            params: { courseId: course.id, lessonId: lesson.id },
+                          })
                           }
                           className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >

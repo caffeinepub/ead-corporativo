@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { QRCodeSVG } from "qrcode.react";
+
 import AppHeader from "../components/AppHeader";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useUserProfile } from "../hooks/useQueries";
@@ -13,7 +13,7 @@ import type { Certificate } from "../lib/ead-types";
 import { Printer, ArrowLeft, Award } from "lucide-react";
 
 export default function CertificatePage() {
-  const { id: courseId } = useParams<{ id: string }>();
+  const { id: courseId } = useParams({ from: "/app/certificate/$id" });
   const { identity } = useInternetIdentity();
   const principal = identity?.getPrincipal().toString() ?? "";
   const { data: profile } = useUserProfile();
@@ -63,7 +63,7 @@ export default function CertificatePage() {
           <Button
             variant="outline"
             className="mt-4"
-            onClick={() => navigate(`/course/${courseId}`)}
+            onClick={() => navigate({ to: "/course/$id", params: { id: courseId } })}
           >
             Voltar ao curso
           </Button>
@@ -83,7 +83,7 @@ export default function CertificatePage() {
         <div className="flex items-center justify-between mb-6 print:hidden">
           <button
             type="button"
-            onClick={() => navigate(`/course/${courseId}`)}
+            onClick={() => navigate({ to: "/course/$id", params: { id: courseId } })}
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -207,12 +207,11 @@ export default function CertificatePage() {
                 className="rounded-lg p-3 border"
                 style={{ borderColor: "oklch(var(--border))", background: "white" }}
               >
-                <QRCodeSVG
-                  value={validationUrl}
-                  size={96}
-                  fgColor="oklch(0.22 0.065 258)"
-                  bgColor="white"
-                  level="M"
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(validationUrl)}&bgcolor=ffffff&color=000000`}
+                  alt="QR Code de validação"
+                  width={96}
+                  height={96}
                 />
               </div>
               <div className="text-center">

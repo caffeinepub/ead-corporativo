@@ -62,7 +62,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { Principal } from "@icp-sdk/core/principal";
-import jsPDF from "jspdf";
+
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -677,96 +677,57 @@ function ReportsTab() {
   const certificates = getCertificates();
 
   const exportPDF = (principalId: string) => {
-    const doc = new jsPDF();
     const localProf = getLocalProfile(principalId);
     const certs = certificates.filter((c) => c.principalId === principalId);
     const logs = getLogs(principalId);
 
-    doc.setFontSize(18);
-    doc.setTextColor(13, 43, 85);
-    doc.text("Relatorio de Aluno - EAD Corporativo", 14, 20);
-
-    doc.setFontSize(11);
-    doc.setTextColor(40, 40, 40);
-    doc.text(`Principal ID: ${principalId}`, 14, 34);
+    const lines: string[] = [];
+    lines.push("=== Relatório de Aluno - EAD Corporativo ===\n");
+    lines.push(`Principal ID: ${principalId}`);
 
     if (localProf) {
-      doc.text(`CPF: ${localProf.cpf}`, 14, 42);
-      doc.text(`Telefone: ${localProf.phone}`, 14, 50);
-      if (localProf.company) doc.text(`Empresa: ${localProf.company}`, 14, 58);
+      lines.push(`CPF: ${localProf.cpf}`);
+      lines.push(`Telefone: ${localProf.phone}`);
+      if (localProf.company) lines.push(`Empresa: ${localProf.company}`);
     }
 
-    let y = 70;
-    doc.setFontSize(13);
-    doc.setTextColor(13, 43, 85);
-    doc.text("Progresso nos Cursos", 14, y);
-    y += 8;
-
+    lines.push("\n--- Progresso nos Cursos ---");
     for (const course of courses) {
       const prog = calculateCourseProgress(principalId, course);
-      doc.setFontSize(10);
-      doc.setTextColor(40, 40, 40);
-      doc.text(
-        `${course.title}: ${prog.completed}/${prog.total} aulas (${prog.percentage}%)`,
-        14,
-        y
-      );
-      y += 7;
+      lines.push(`${course.title}: ${prog.completed}/${prog.total} aulas (${prog.percentage}%)`);
     }
 
-    y += 6;
-    doc.setFontSize(13);
-    doc.setTextColor(13, 43, 85);
-    doc.text("Certificados Emitidos", 14, y);
-    y += 8;
-
+    lines.push("\n--- Certificados Emitidos ---");
     if (certs.length === 0) {
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text("Nenhum certificado emitido.", 14, y);
-      y += 7;
+      lines.push("Nenhum certificado emitido.");
     } else {
       for (const cert of certs) {
-        doc.setFontSize(10);
-        doc.setTextColor(40, 40, 40);
-        doc.text(
-          `${cert.courseName} - ${new Date(cert.completionDate).toLocaleDateString("pt-BR")} (Cod: ${cert.code})`,
-          14,
-          y
-        );
-        y += 7;
+        lines.push(`${cert.courseName} - ${new Date(cert.completionDate).toLocaleDateString("pt-BR")} (Cod: ${cert.code})`);
       }
     }
 
-    y += 6;
-    doc.setFontSize(13);
-    doc.setTextColor(13, 43, 85);
-    doc.text("Logs de Acesso", 14, y);
-    y += 8;
-
+    lines.push("\n--- Logs de Acesso (últimos 10) ---");
     if (logs.length === 0) {
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text("Nenhum log registrado.", 14, y);
+      lines.push("Nenhum log registrado.");
     } else {
       for (const log of logs.slice(-10)) {
         const start = new Date(log.sessionStart).toLocaleString("pt-BR");
         const end = log.sessionEnd
           ? new Date(log.sessionEnd).toLocaleString("pt-BR")
           : "Em andamento";
-        doc.setFontSize(9);
-        doc.setTextColor(40, 40, 40);
-        doc.text(`Entrada: ${start} | Saida: ${end}`, 14, y);
-        y += 6;
-        if (y > 270) {
-          doc.addPage();
-          y = 20;
-        }
+        lines.push(`Entrada: ${start} | Saída: ${end}`);
       }
     }
 
-    doc.save(`relatorio_${principalId.substring(0, 8)}.pdf`);
-    toast.success("PDF exportado.");
+    const content = lines.join("\n");
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relatorio_${principalId.substring(0, 8)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Relatório exportado.");
   };
 
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);

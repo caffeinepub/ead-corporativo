@@ -9,20 +9,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
-import { GraduationCap, Loader2, Sparkles } from "lucide-react";
+import {
+  GraduationCap,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+  WifiOff,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useRequestApproval, useSaveProfile } from "../hooks/useQueries";
+import { useActorState } from "../hooks/useQueries";
 import { saveLocalProfile } from "../lib/ead-storage";
 
 export default function RegisterPage() {
   const { identity } = useInternetIdentity();
+  const {
+    actor,
+    isFetching: actorFetching,
+    hasError: actorError,
+  } = useActorState();
   const principal = identity?.getPrincipal().toString() ?? "";
-  const { actor, isFetching: actorFetching } = useActor();
-  const saveProfile = useSaveProfile();
-  const requestApproval = useRequestApproval();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -39,6 +46,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (
       !form.name.trim() ||
       !form.email.trim() ||
@@ -49,90 +57,62 @@ export default function RegisterPage() {
       return;
     }
 
-    // Check actor availability before attempting to save
-    if (!actor || actorFetching) {
-      toast.error("Conectando à rede, aguarde um momento e tente novamente.");
+    if (!actor) {
+      toast.error(
+        actorError
+          ? "Não foi possível conectar ao servidor. Recarregue a página."
+          : "Aguarde a conexão com a rede ser estabelecida.",
+      );
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // Save profile to backend (name only)
-      try {
-        await saveProfile.mutateAsync(form.name.trim());
-      } catch (err) {
-        console.error("Erro ao salvar perfil:", err);
-        toast.error(
-          "Não foi possível salvar o cadastro. Verifique sua conexão e tente novamente.",
-        );
-        setIsSubmitting(false);
-        return;
+      // Step 1: Save profile to backend (this also assigns role automatically
+      // if the backend is configured to do so, or via _initializeAccessControlWithSecret)
+      await actor.saveCallerUserProfile({ name: form.name.trim() });
+
+      // Step 2: Save extended profile to localStorage
+      if (principal) {
+        saveLocalProfile(principal, {
+          email: form.email.trim(),
+          cpf: form.cpf.trim(),
+          phone: form.phone.trim(),
+        });
       }
 
-      // Save extended profile to localStorage
-      saveLocalProfile(principal, {
-        email: form.email.trim(),
-        cpf: form.cpf.trim(),
-        phone: form.phone.trim(),
-      });
+      // Step 3: Try to request approval (only works for #user role, silently skipped for admins)
+      try {
+        await actor.requestApproval();
+      } catch {
+        // Silently ignore — admin users don't have a #user role, so this call will fail for them
+      }
 
-      // Request approval for non-admin users (backend determines if admin)
-      // useRequestApproval already swallows errors internally
-      await requestApproval.mutateAsync();
-
-      // Give backend a moment to process before invalidating queries
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // Invalidate all relevant queries so the navigation guard detects the new state
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["userProfile"] }),
-        queryClient.invalidateQueries({ queryKey: ["isAdmin"] }),
-        queryClient.invalidateQueries({ queryKey: ["isApproved"] }),
-      ]);
-
-      // Explicitly refetch so the navigation guard sees updated values immediately
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["userProfile"] }),
-        queryClient.refetchQueries({ queryKey: ["isAdmin"] }),
-        queryClient.refetchQueries({ queryKey: ["isApproved"] }),
-      ]);
+      // Step 4: Invalidate all queries so the Router re-evaluates the user's state
+      await queryClient.invalidateQueries();
 
       toast.success("Cadastro realizado com sucesso!");
-    } catch (err) {
-      console.error("Erro no cadastro:", err);
-      toast.error(
-        "Não foi possível salvar o cadastro. Verifique sua conexão e tente novamente.",
-      );
+      // The Router (App.tsx) will automatically redirect based on the new role/approval state
+    } catch (err: unknown) {
+      console.error("Registration error:", err);
+      const message = err instanceof Error ? err.message : "Erro desconhecido.";
+      if (message.includes("rejected") || message.includes("Unauthorized")) {
+        toast.error("Erro de permissão. Tente fazer logout e login novamente.");
+      } else if (
+        message.includes("network") ||
+        message.includes("fetch") ||
+        message.includes("connection")
+      ) {
+        toast.error(
+          "Erro de conexão. Verifique sua internet e tente novamente.",
+        );
+      } else {
+        toast.error("Não foi possível salvar o cadastro. Tente novamente.");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  const isLoading =
-    isSubmitting || saveProfile.isPending || requestApproval.isPending;
-
-  // If actor is still initializing on mount, show a reconnecting state
-  if (actorFetching && !actor) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "oklch(0.10 0.04 295)" }}
-      >
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div
-            className="w-10 h-10 border-4 rounded-full animate-spin"
-            style={{
-              borderColor: "oklch(0.62 0.22 295 / 0.2)",
-              borderTopColor: "oklch(0.62 0.22 295)",
-            }}
-          />
-          <p className="text-sm" style={{ color: "oklch(0.65 0.06 295)" }}>
-            Reconectando à rede...
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -215,6 +195,7 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   placeholder="Seu nome completo"
                   required
+                  disabled={isSubmitting}
                   style={{
                     background: "oklch(0.18 0.06 295)",
                     borderColor: "oklch(0.28 0.08 295)",
@@ -239,6 +220,7 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   placeholder="seu@email.com"
                   required
+                  disabled={isSubmitting}
                   style={{
                     background: "oklch(0.18 0.06 295)",
                     borderColor: "oklch(0.28 0.08 295)",
@@ -262,6 +244,7 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   placeholder="(00) 00000-0000"
                   required
+                  disabled={isSubmitting}
                   style={{
                     background: "oklch(0.18 0.06 295)",
                     borderColor: "oklch(0.28 0.08 295)",
@@ -282,6 +265,7 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   placeholder="000.000.000-00"
                   required
+                  disabled={isSubmitting}
                   style={{
                     background: "oklch(0.18 0.06 295)",
                     borderColor: "oklch(0.28 0.08 295)",
@@ -293,22 +277,62 @@ export default function RegisterPage() {
 
               <Button
                 type="submit"
-                disabled={isLoading || actorFetching}
+                disabled={isSubmitting || !actor || actorError}
                 className="w-full mt-2 font-semibold cosmos-glow"
                 style={{
                   background: "oklch(0.62 0.22 295)",
                   color: "white",
                 }}
               >
-                {isLoading ? (
+                {isSubmitting ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : null}
-                {isLoading
-                  ? "Processando..."
-                  : actorFetching
-                    ? "Aguardando conexão..."
-                    : "Solicitar Acesso"}
+                {isSubmitting ? "Processando..." : "Solicitar Acesso"}
               </Button>
+
+              {/* Actor error state — offer retry */}
+              {actorError && !actorFetching && (
+                <div
+                  className="rounded-lg p-3 flex flex-col items-center gap-2"
+                  style={{
+                    background: "oklch(0.18 0.07 27 / 0.25)",
+                    border: "1px solid oklch(0.65 0.22 27 / 0.35)",
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <WifiOff
+                      className="h-4 w-4 flex-shrink-0"
+                      style={{ color: "oklch(0.75 0.20 27)" }}
+                    />
+                    <p
+                      className="text-xs"
+                      style={{ color: "oklch(0.75 0.20 27)" }}
+                    >
+                      Não foi possível conectar ao servidor.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="flex items-center gap-1.5 text-xs font-semibold underline underline-offset-2 hover:opacity-80"
+                    style={{ color: "oklch(0.62 0.22 295)" }}
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Tentar novamente
+                  </button>
+                </div>
+              )}
+
+              {/* Actor still loading */}
+              {!actor && !actorError && actorFetching && (
+                <p
+                  className="text-xs text-center flex items-center justify-center gap-1.5"
+                  style={{ color: "oklch(0.55 0.08 295)" }}
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Conectando à rede...
+                </p>
+              )}
             </form>
           </CardContent>
         </Card>

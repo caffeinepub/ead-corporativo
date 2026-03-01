@@ -1,13 +1,18 @@
 import { Toaster } from "@/components/ui/sonner";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { RefreshCw, WifiOff } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
-import { useIsAdmin, useIsApproved, useUserProfile } from "./hooks/useQueries";
+import {
+  useActorState,
+  useIsAdmin,
+  useIsApproved,
+  useUserProfile,
+} from "./hooks/useQueries";
 
 import AdminPage from "./pages/AdminPage";
 import CertificatePage from "./pages/CertificatePage";
 import CoursePage from "./pages/CoursePage";
 import DashboardPage from "./pages/DashboardPage";
-// Pages
 import LandingPage from "./pages/LandingPage";
 import LessonPage from "./pages/LessonPage";
 import PendingPage from "./pages/PendingPage";
@@ -20,7 +25,7 @@ function getHash(): string {
   return window.location.hash.replace(/^#/, "") || "/";
 }
 
-function navigate(path: string) {
+export function navigate(path: string) {
   window.location.hash = path;
 }
 
@@ -33,9 +38,6 @@ function useHash() {
   }, []);
   return hash;
 }
-
-// Export navigate for use in pages
-export { navigate };
 
 // ── Route matching helpers ────────────────────────────────────────────────────
 
@@ -58,7 +60,114 @@ function matchPath(
   return params;
 }
 
-// ── Auth Guard & Routing ──────────────────────────────────────────────────────
+// ── Network error screen ──────────────────────────────────────────────────────
+
+function NetworkErrorScreen() {
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
+      style={{ background: "oklch(0.10 0.04 295)" }}
+    >
+      {/* Star field background */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: [
+            "radial-gradient(1px 1px at 20% 30%, oklch(0.92 0.04 295 / 0.6) 0%, transparent 100%)",
+            "radial-gradient(1px 1px at 70% 20%, oklch(0.92 0.04 295 / 0.4) 0%, transparent 100%)",
+            "radial-gradient(1px 1px at 45% 75%, oklch(0.92 0.04 295 / 0.5) 0%, transparent 100%)",
+            "radial-gradient(1px 1px at 88% 55%, oklch(0.92 0.04 295 / 0.3) 0%, transparent 100%)",
+            "radial-gradient(2px 2px at 55% 40%, oklch(0.72 0.18 295 / 0.4) 0%, transparent 100%)",
+            "radial-gradient(ellipse at 50% 50%, oklch(0.14 0.07 295) 0%, transparent 70%)",
+          ].join(", "),
+        }}
+      />
+
+      <div className="relative z-10 flex flex-col items-center gap-6 max-w-sm text-center">
+        {/* Icon */}
+        <div
+          className="flex h-20 w-20 items-center justify-center rounded-2xl"
+          style={{
+            background: "oklch(0.18 0.07 27 / 0.3)",
+            border: "1px solid oklch(0.65 0.22 27 / 0.4)",
+          }}
+        >
+          <WifiOff
+            className="h-9 w-9"
+            style={{ color: "oklch(0.75 0.20 27)" }}
+          />
+        </div>
+
+        {/* Text */}
+        <div className="space-y-2">
+          <h2
+            className="text-2xl font-display font-semibold tracking-tight"
+            style={{ color: "oklch(0.93 0.02 295)" }}
+          >
+            Erro de Conexão
+          </h2>
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: "oklch(0.58 0.06 295)" }}
+          >
+            Não foi possível conectar à plataforma. Isso pode ser causado por
+            instabilidade na rede ou manutenção no servidor. Aguarde alguns
+            instantes e tente novamente.
+          </p>
+        </div>
+
+        {/* Retry button */}
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold text-sm transition-opacity hover:opacity-80 active:opacity-60"
+          style={{
+            background: "oklch(0.62 0.22 295)",
+            color: "white",
+          }}
+        >
+          <RefreshCw className="h-4 w-4" />
+          Tentar novamente
+        </button>
+
+        <p className="text-xs" style={{ color: "oklch(0.38 0.04 295)" }}>
+          &copy; {new Date().getFullYear()}. Built with{" "}
+          <a
+            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 hover:opacity-80"
+          >
+            caffeine.ai
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Loading screen ──────────────────────────────────────────────────────────
+
+function LoadingScreen({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div
+          className="w-10 h-10 border-4 rounded-full animate-spin"
+          style={{
+            borderColor: "oklch(0.62 0.22 295 / 0.2)",
+            borderTopColor: "oklch(0.62 0.22 295)",
+          }}
+        />
+        <p className="text-sm text-muted-foreground">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Router ────────────────────────────────────────────────────────────────────
+// Uses pure conditional rendering — NO navigate() calls inside effects.
+// This eliminates the insertBefore DOM crash entirely.
 
 function Router() {
   const { identity, isInitializing } = useInternetIdentity();
@@ -66,172 +175,86 @@ function Router() {
   const path = useHash();
 
   const {
-    data: profile,
-    isLoading: profileLoading,
-    isFetching: profileFetching,
-  } = useUserProfile();
-  const {
-    data: isAdmin,
-    isLoading: adminLoading,
-    isFetching: adminFetching,
-  } = useIsAdmin();
-  const {
-    data: isApproved,
-    isLoading: approvedLoading,
-    isFetching: approvedFetching,
-  } = useIsApproved();
+    actor,
+    isFetching: actorFetching,
+    hasError: actorError,
+  } = useActorState();
+  const { data: profile, isLoading: profileLoading } = useUserProfile();
+  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
+  const { data: isApproved, isLoading: approvedLoading } = useIsApproved();
 
-  const isLoading =
-    isInitializing ||
-    (isAuthenticated &&
-      (profileLoading ||
-        adminLoading ||
-        approvedLoading ||
-        profileFetching ||
-        adminFetching ||
-        approvedFetching));
-
-  // ── Navigation guard ────────────────────────────────────────────────────────
-  const navigatingRef = useRef(false);
-  const pendingNavRef = useRef<string | null>(null);
-
-  // Reset navigation locks when path actually changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on path change
-  useEffect(() => {
-    navigatingRef.current = false;
-    pendingNavRef.current = null;
-  }, [path]);
-
-  // Phase 1: Compute the desired destination (pure logic, no DOM side-effects)
-  useEffect(() => {
-    if (isLoading) return;
-    if (navigatingRef.current) return;
-
-    // Public routes — always accessible
-    if (path.startsWith("/validate")) return;
-
-    if (!isAuthenticated) {
-      if (path !== "/") pendingNavRef.current = "/";
-      return;
-    }
-
-    // profile === undefined means the query hasn't resolved yet — wait
-    if (profile === undefined) return;
-
-    // profile === null means loaded but user has no profile yet → register
-    if (profile === null) {
-      if (path !== "/register") pendingNavRef.current = "/register";
-      return;
-    }
-
-    // Admin
-    if (isAdmin) {
-      if (!path.startsWith("/admin")) pendingNavRef.current = "/admin";
-      return;
-    }
-
-    // Not approved
-    if (!isApproved) {
-      if (path !== "/pending") pendingNavRef.current = "/pending";
-      return;
-    }
-
-    // Approved student: redirect away from landing/register/pending
-    const guestOnlyPaths = ["/", "/register", "/pending"];
-    if (guestOnlyPaths.includes(path)) {
-      pendingNavRef.current = "/dashboard";
-    }
-  }, [isLoading, isAuthenticated, profile, isAdmin, isApproved, path]);
-
-  // Phase 2: Execute navigation AFTER React has finished rendering (post-paint)
-  // Using useLayoutEffect + setTimeout(0) defers the hash change until after
-  // React completes its reconciliation, preventing the insertBefore DOM crash.
-  useLayoutEffect(() => {
-    const dest = pendingNavRef.current;
-    if (!dest || navigatingRef.current) return;
-
-    const timer = setTimeout(() => {
-      const current = pendingNavRef.current;
-      if (!current || navigatingRef.current) return;
-      navigatingRef.current = true;
-      pendingNavRef.current = null;
-      navigate(current);
-    }, 0);
-
-    return () => clearTimeout(timer);
-  });
-
-  // ── Loading screen ──────────────────────────────────────────────────────────
-  if (isLoading && isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div
-            className="w-10 h-10 border-4 rounded-full animate-spin"
-            style={{
-              borderColor: "oklch(0.62 0.22 295 / 0.2)",
-              borderTopColor: "oklch(0.62 0.22 295)",
-            }}
-          />
-          <p className="text-sm text-muted-foreground">Verificando acesso...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Render page based on current path ───────────────────────────────────────
-
-  // /validate/:code
+  // Public route — always accessible
   const validateMatch = matchPath("/validate/:code", path);
   if (validateMatch) {
     return <ValidateCertPage code={validateMatch.code} />;
   }
 
-  if (path === "/" || path === "") {
+  // Still initializing identity
+  if (isInitializing) {
+    return <LoadingScreen message="Inicializando..." />;
+  }
+
+  // Not logged in — show landing
+  if (!isAuthenticated) {
     return <LandingPage />;
   }
 
-  if (path === "/register") {
+  // Actor failed to initialize (network error or backend crash)
+  if (actorError && !actorFetching && !actor) {
+    return <NetworkErrorScreen />;
+  }
+
+  // Actor still loading
+  if (actorFetching) {
+    return <LoadingScreen message="Conectando à rede..." />;
+  }
+
+  // Logged in but waiting for profile/role queries
+  if (profileLoading || adminLoading || approvedLoading) {
+    return <LoadingScreen message="Verificando acesso..." />;
+  }
+
+  // ── Authenticated routing (pure conditional, no navigate) ──────────────────
+
+  // No profile yet — must register
+  if (!profile) {
     return <RegisterPage />;
   }
 
-  if (path === "/pending") {
-    return <PendingPage />;
-  }
-
-  if (path === "/dashboard") {
-    return <DashboardPage />;
-  }
-
-  // /course/:id
-  const courseMatch = matchPath("/course/:id", path);
-  if (courseMatch) {
-    return <CoursePage courseId={courseMatch.id} />;
-  }
-
-  // /lesson/:courseId/:lessonId
-  const lessonMatch = matchPath("/lesson/:courseId/:lessonId", path);
-  if (lessonMatch) {
-    return (
-      <LessonPage
-        courseId={lessonMatch.courseId}
-        lessonId={lessonMatch.lessonId}
-      />
-    );
-  }
-
-  // /certificate/:id
-  const certMatch = matchPath("/certificate/:id", path);
-  if (certMatch) {
-    return <CertificatePage certId={certMatch.id} />;
-  }
-
-  if (path === "/admin" || path.startsWith("/admin/")) {
+  // Admin — show admin panel
+  if (isAdmin) {
+    // Allow sub-routes within admin
+    if (path.startsWith("/admin")) {
+      return <AdminPage />;
+    }
+    // Redirect by rendering AdminPage directly (no hash mutation needed)
     return <AdminPage />;
   }
 
-  // 404 fallback
-  return <LandingPage />;
+  // Approved user routes
+  if (isApproved) {
+    if (path === "/dashboard") return <DashboardPage />;
+
+    const courseMatch = matchPath("/course/:id", path);
+    if (courseMatch) return <CoursePage courseId={courseMatch.id} />;
+
+    const lessonMatch = matchPath("/lesson/:courseId/:lessonId", path);
+    if (lessonMatch)
+      return (
+        <LessonPage
+          courseId={lessonMatch.courseId}
+          lessonId={lessonMatch.lessonId}
+        />
+      );
+
+    const certMatch = matchPath("/certificate/:id", path);
+    if (certMatch) return <CertificatePage certId={certMatch.id} />;
+
+    return <DashboardPage />;
+  }
+
+  // Waiting for approval
+  return <PendingPage />;
 }
 
 export default function App() {

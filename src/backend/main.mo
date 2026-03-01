@@ -54,7 +54,9 @@ actor {
 
   // Profile Management
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Anonymous principals cannot save profiles (must not occur!)") };
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Anonymous principals cannot save profiles");
+    };
     userProfiles.add(caller, profile);
   };
 

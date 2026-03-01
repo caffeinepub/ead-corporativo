@@ -2,6 +2,28 @@ import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApprovalStatus, UserRole } from "../backend.d";
 import { useActor } from "./useActor";
+import { useInternetIdentity } from "./useInternetIdentity";
+
+/**
+ * Returns the actor connection state, including whether it failed to initialize.
+ * hasError = true means actor failed to connect (backend crash or network error).
+ */
+export function useActorState() {
+  const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  const queryClient = useQueryClient();
+  const queryKey = ["actor", identity?.getPrincipal().toString()];
+  const queryState = queryClient.getQueryState(queryKey);
+  // hasError: query finished (not fetching), actor is null, and status is error
+  // Also treat "success" with null actor as an error (backend returned null unexpectedly)
+  const hasError =
+    !isFetching &&
+    actor === null &&
+    !!identity &&
+    (queryState?.status === "error" || queryState?.status === "success");
+
+  return { actor, isFetching, hasError };
+}
 
 export function useUserProfile() {
   const { actor, isFetching } = useActor();

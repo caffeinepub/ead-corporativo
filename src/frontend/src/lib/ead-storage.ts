@@ -1,10 +1,10 @@
 import {
-  type Course,
-  type LocalProfile,
-  type Progress,
   type AccessLog,
   type Certificate,
+  type Course,
   DEMO_COURSE,
+  type LocalProfile,
+  type Progress,
 } from "./ead-types";
 
 // ─── Keys ──────────────────────────────────────────────────────────────────────
@@ -52,7 +52,10 @@ export function getLocalProfile(principal: string): LocalProfile | null {
   }
 }
 
-export function saveLocalProfile(principal: string, profile: LocalProfile): void {
+export function saveLocalProfile(
+  principal: string,
+  profile: LocalProfile,
+): void {
   localStorage.setItem(profileKey(principal), JSON.stringify(profile));
 }
 
@@ -76,7 +79,7 @@ export function updateLessonProgress(
   principal: string,
   lessonId: string,
   secondsWatched: number,
-  duration: number
+  duration: number,
 ): void {
   const progress = getProgress(principal);
   progress[lessonId] = {
@@ -132,7 +135,9 @@ export function getCertificates(): Certificate[] {
 
 export function saveCertificate(cert: Certificate): void {
   const certs = getCertificates();
-  const existing = certs.findIndex((c) => c.courseId === cert.courseId && c.principalId === cert.principalId);
+  const existing = certs.findIndex(
+    (c) => c.courseId === cert.courseId && c.principalId === cert.principalId,
+  );
   if (existing >= 0) {
     certs[existing] = cert;
   } else {
@@ -147,11 +152,11 @@ export function getCertificateByCode(code: string): Certificate | null {
 
 export function getCertificateForStudent(
   principalId: string,
-  courseId: string
+  courseId: string,
 ): Certificate | null {
   return (
     getCertificates().find(
-      (c) => c.principalId === principalId && c.courseId === courseId
+      (c) => c.principalId === principalId && c.courseId === courseId,
     ) ?? null
   );
 }
@@ -160,7 +165,7 @@ export function getCertificateForStudent(
 
 export function calculateCourseProgress(
   principal: string,
-  course: Course
+  course: Course,
 ): { completed: number; total: number; percentage: number } {
   const progress = getProgress(principal);
   let total = 0;
@@ -185,7 +190,13 @@ export function isCourseComplete(principal: string, course: Course): boolean {
 
 // ─── Generate certificate code ─────────────────────────────────────────────────
 
-export function generateCertCode(principalId: string, courseId: string): string {
-  const hash = btoa(`${principalId}-${courseId}-${Date.now()}`).replace(/[^A-Z0-9]/gi, "").toUpperCase().substring(0, 12);
+export function generateCertCode(
+  principalId: string,
+  courseId: string,
+): string {
+  const hash = btoa(`${principalId}-${courseId}-${Date.now()}`)
+    .replace(/[^A-Z0-9]/gi, "")
+    .toUpperCase()
+    .substring(0, 12);
   return hash;
 }

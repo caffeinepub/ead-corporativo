@@ -1,9 +1,9 @@
 // ─── EAD Data Types ───────────────────────────────────────────────────────────
 
 export interface LocalProfile {
+  email: string;
   cpf: string;
   phone: string;
-  company: string;
 }
 
 export interface Lesson {

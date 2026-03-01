@@ -1,18 +1,18 @@
-import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
-import { useUserProfile, useIsAdmin, useIsApproved } from "./hooks/useQueries";
+import { useIsAdmin, useIsApproved, useUserProfile } from "./hooks/useQueries";
 
+import AdminPage from "./pages/AdminPage";
+import CertificatePage from "./pages/CertificatePage";
+import CoursePage from "./pages/CoursePage";
+import DashboardPage from "./pages/DashboardPage";
 // Pages
 import LandingPage from "./pages/LandingPage";
-import RegisterPage from "./pages/RegisterPage";
-import PendingPage from "./pages/PendingPage";
-import DashboardPage from "./pages/DashboardPage";
-import CoursePage from "./pages/CoursePage";
 import LessonPage from "./pages/LessonPage";
-import CertificatePage from "./pages/CertificatePage";
+import PendingPage from "./pages/PendingPage";
+import RegisterPage from "./pages/RegisterPage";
 import ValidateCertPage from "./pages/ValidateCertPage";
-import AdminPage from "./pages/AdminPage";
 
 // ── Simple hash-based router (no library) ──────────────────────────────────
 
@@ -39,7 +39,10 @@ export { navigate };
 
 // ── Route matching helpers ────────────────────────────────────────────────────
 
-function matchPath(pattern: string, path: string): Record<string, string> | null {
+function matchPath(
+  pattern: string,
+  path: string,
+): Record<string, string> | null {
   const patternParts = pattern.split("/").filter(Boolean);
   const pathParts = path.split("/").filter(Boolean);
   if (patternParts.length !== pathParts.length) return null;
@@ -62,59 +65,114 @@ function Router() {
   const isAuthenticated = !!identity;
   const path = useHash();
 
-  const { data: profile, isLoading: profileLoading } = useUserProfile();
-  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
-  const { data: isApproved, isLoading: approvedLoading } = useIsApproved();
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    isFetching: profileFetching,
+  } = useUserProfile();
+  const {
+    data: isAdmin,
+    isLoading: adminLoading,
+    isFetching: adminFetching,
+  } = useIsAdmin();
+  const {
+    data: isApproved,
+    isLoading: approvedLoading,
+    isFetching: approvedFetching,
+  } = useIsApproved();
 
   const isLoading =
     isInitializing ||
-    (isAuthenticated && (profileLoading || adminLoading || approvedLoading));
+    (isAuthenticated &&
+      (profileLoading ||
+        adminLoading ||
+        approvedLoading ||
+        profileFetching ||
+        adminFetching ||
+        approvedFetching));
 
   // ── Navigation guard ────────────────────────────────────────────────────────
+  const navigatingRef = useRef(false);
+  const pendingNavRef = useRef<string | null>(null);
+
+  // Reset navigation locks when path actually changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on path change
+  useEffect(() => {
+    navigatingRef.current = false;
+    pendingNavRef.current = null;
+  }, [path]);
+
+  // Phase 1: Compute the desired destination (pure logic, no DOM side-effects)
   useEffect(() => {
     if (isLoading) return;
+    if (navigatingRef.current) return;
 
     // Public routes — always accessible
     if (path.startsWith("/validate")) return;
 
     if (!isAuthenticated) {
-      // Not logged in: only allow landing page
-      if (path !== "/") navigate("/");
+      if (path !== "/") pendingNavRef.current = "/";
       return;
     }
 
-    // Logged in but no profile yet
-    if (!profile) {
-      if (path !== "/register") navigate("/register");
+    // profile === undefined means the query hasn't resolved yet — wait
+    if (profile === undefined) return;
+
+    // profile === null means loaded but user has no profile yet → register
+    if (profile === null) {
+      if (path !== "/register") pendingNavRef.current = "/register";
       return;
     }
 
     // Admin
     if (isAdmin) {
-      const adminAllowed = path.startsWith("/admin");
-      if (!adminAllowed) navigate("/admin");
+      if (!path.startsWith("/admin")) pendingNavRef.current = "/admin";
       return;
     }
 
     // Not approved
     if (!isApproved) {
-      if (path !== "/pending") navigate("/pending");
+      if (path !== "/pending") pendingNavRef.current = "/pending";
       return;
     }
 
-    // Approved student: redirect away from login/register/pending
+    // Approved student: redirect away from landing/register/pending
     const guestOnlyPaths = ["/", "/register", "/pending"];
     if (guestOnlyPaths.includes(path)) {
-      navigate("/dashboard");
+      pendingNavRef.current = "/dashboard";
     }
   }, [isLoading, isAuthenticated, profile, isAdmin, isApproved, path]);
+
+  // Phase 2: Execute navigation AFTER React has finished rendering (post-paint)
+  // Using useLayoutEffect + setTimeout(0) defers the hash change until after
+  // React completes its reconciliation, preventing the insertBefore DOM crash.
+  useLayoutEffect(() => {
+    const dest = pendingNavRef.current;
+    if (!dest || navigatingRef.current) return;
+
+    const timer = setTimeout(() => {
+      const current = pendingNavRef.current;
+      if (!current || navigatingRef.current) return;
+      navigatingRef.current = true;
+      pendingNavRef.current = null;
+      navigate(current);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  });
 
   // ── Loading screen ──────────────────────────────────────────────────────────
   if (isLoading && isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+          <div
+            className="w-10 h-10 border-4 rounded-full animate-spin"
+            style={{
+              borderColor: "oklch(0.62 0.22 295 / 0.2)",
+              borderTopColor: "oklch(0.62 0.22 295)",
+            }}
+          />
           <p className="text-sm text-muted-foreground">Verificando acesso...</p>
         </div>
       </div>
@@ -154,7 +212,12 @@ function Router() {
   // /lesson/:courseId/:lessonId
   const lessonMatch = matchPath("/lesson/:courseId/:lessonId", path);
   if (lessonMatch) {
-    return <LessonPage courseId={lessonMatch.courseId} lessonId={lessonMatch.lessonId} />;
+    return (
+      <LessonPage
+        courseId={lessonMatch.courseId}
+        lessonId={lessonMatch.lessonId}
+      />
+    );
   }
 
   // /certificate/:id

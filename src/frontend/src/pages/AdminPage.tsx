@@ -1,27 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,36 +11,62 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
-import AppHeader from "../components/AppHeader";
-import { useUserProfile, useListApprovals, useSetApproval, ApprovalStatus } from "../hooks/useQueries";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  getCourses,
-  saveCourses,
-  getProgress,
-  getLogs,
-  getLocalProfile,
-  getCertificates,
-  calculateCourseProgress,
-} from "../lib/ead-storage";
-import type { Course, Module, Lesson } from "../lib/ead-types";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import type { Principal } from "@icp-sdk/core/principal";
 import {
-  Users,
-  BookOpen,
-  BarChart3,
-  Plus,
-  Trash2,
-  Check,
   Ban,
-  FileText,
+  BarChart3,
+  BookOpen,
+  Check,
   ChevronDown,
   ChevronRight,
+  FileText,
   GraduationCap,
   Loader2,
+  Plus,
+  Trash2,
+  Users,
 } from "lucide-react";
-import type { Principal } from "@icp-sdk/core/principal";
-
+import { toast } from "sonner";
+import AppHeader from "../components/AppHeader";
+import {
+  ApprovalStatus,
+  useListApprovals,
+  useSetApproval,
+  useUserProfile,
+} from "../hooks/useQueries";
+import {
+  calculateCourseProgress,
+  getCertificates,
+  getCourses,
+  getLocalProfile,
+  getLogs,
+  getProgress,
+  saveCourses,
+} from "../lib/ead-storage";
+import type { Course, Lesson, Module } from "../lib/ead-types";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -115,7 +119,10 @@ function StudentsTab() {
 
   const handleApprove = async (principal: Principal) => {
     try {
-      await setApproval.mutateAsync({ user: principal, status: ApprovalStatus.approved });
+      await setApproval.mutateAsync({
+        user: principal,
+        status: ApprovalStatus.approved,
+      });
       toast.success("Aluno aprovado.");
     } catch {
       toast.error("Erro ao aprovar aluno.");
@@ -124,7 +131,10 @@ function StudentsTab() {
 
   const handleBlock = async (principal: Principal) => {
     try {
-      await setApproval.mutateAsync({ user: principal, status: ApprovalStatus.rejected });
+      await setApproval.mutateAsync({
+        user: principal,
+        status: ApprovalStatus.rejected,
+      });
       toast.success("Aluno bloqueado.");
     } catch {
       toast.error("Erro ao bloquear aluno.");
@@ -133,16 +143,28 @@ function StudentsTab() {
 
   const counts = {
     all: approvals?.length ?? 0,
-    pending: approvals?.filter((a) => a.status === ApprovalStatus.pending).length ?? 0,
-    approved: approvals?.filter((a) => a.status === ApprovalStatus.approved).length ?? 0,
-    rejected: approvals?.filter((a) => a.status === ApprovalStatus.rejected).length ?? 0,
+    pending:
+      approvals?.filter((a) => a.status === ApprovalStatus.pending).length ?? 0,
+    approved:
+      approvals?.filter((a) => a.status === ApprovalStatus.approved).length ??
+      0,
+    rejected:
+      approvals?.filter((a) => a.status === ApprovalStatus.rejected).length ??
+      0,
   };
 
   return (
     <div>
       {/* Filter buttons */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {(["all", ApprovalStatus.pending, ApprovalStatus.approved, ApprovalStatus.rejected] as const).map((f) => {
+        {(
+          [
+            "all",
+            ApprovalStatus.pending,
+            ApprovalStatus.approved,
+            ApprovalStatus.rejected,
+          ] as const
+        ).map((f) => {
           const labels: Record<string, string> = {
             all: "Todos",
             pending: "Aguardando",
@@ -150,27 +172,34 @@ function StudentsTab() {
             rejected: "Bloqueados",
           };
           const countVal = counts[f === "all" ? "all" : f];
+          const isActive = filter === f;
           return (
             <button
               key={f}
               type="button"
               onClick={() => setFilter(f)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                filter === f
-                  ? "text-white"
-                  : "border border-border bg-card hover:bg-muted text-foreground"
-              }`}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all"
               style={
-                filter === f
-                  ? { background: "oklch(var(--navy-deep))" }
-                  : {}
+                isActive
+                  ? { background: "oklch(0.62 0.22 295)", color: "white" }
+                  : {
+                      background: "oklch(0.16 0.06 295)",
+                      border: "1px solid oklch(0.28 0.08 295)",
+                      color: "oklch(0.72 0.06 295)",
+                    }
               }
             >
               {labels[f]}
               <span
-                className={`rounded-full px-1.5 py-0.5 text-xs ${
-                  filter === f ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
-                }`}
+                className="rounded-full px-1.5 py-0.5 text-xs"
+                style={
+                  isActive
+                    ? { background: "oklch(1 0 0 / 0.2)", color: "white" }
+                    : {
+                        background: "oklch(0.22 0.07 295)",
+                        color: "oklch(0.62 0.10 295)",
+                      }
+                }
               >
                 {countVal}
               </span>
@@ -182,29 +211,59 @@ function StudentsTab() {
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12 w-full" />
+            <Skeleton
+              key={i}
+              className="h-12 w-full"
+              style={{ background: "oklch(0.18 0.06 295)" }}
+            />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-12 text-center">
-          <Users className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">
+        <div
+          className="rounded-xl p-12 text-center"
+          style={{
+            background: "oklch(0.14 0.05 295)",
+            border: "1px dashed oklch(0.28 0.08 295)",
+          }}
+        >
+          <Users
+            className="h-8 w-8 mx-auto mb-3"
+            style={{ color: "oklch(0.38 0.06 295)" }}
+          />
+          <p className="text-sm" style={{ color: "oklch(0.55 0.06 295)" }}>
             Nenhum aluno neste filtro.
           </p>
         </div>
       ) : (
-        <div className="rounded-lg border border-border overflow-hidden">
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{ border: "1px solid oklch(0.24 0.07 295)" }}
+        >
           <Table>
             <TableHeader>
-              <TableRow style={{ background: "oklch(var(--navy-pale))" }}>
-                <TableHead className="font-semibold text-xs" style={{ color: "oklch(var(--navy-deep))" }}>
+              <TableRow
+                style={{
+                  background: "oklch(0.16 0.06 295)",
+                  borderBottom: "1px solid oklch(0.24 0.07 295)",
+                }}
+              >
+                <TableHead
+                  className="font-semibold text-xs"
+                  style={{ color: "oklch(0.72 0.18 295)" }}
+                >
                   Principal ID
                 </TableHead>
-                <TableHead className="font-semibold text-xs" style={{ color: "oklch(var(--navy-deep))" }}>
+                <TableHead
+                  className="font-semibold text-xs"
+                  style={{ color: "oklch(0.72 0.18 295)" }}
+                >
                   Status
                 </TableHead>
-                <TableHead className="font-semibold text-xs text-right" style={{ color: "oklch(var(--navy-deep))" }}>
-                  Acoes
+                <TableHead
+                  className="font-semibold text-xs text-right"
+                  style={{ color: "oklch(0.72 0.18 295)" }}
+                >
+                  Ações
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -212,8 +271,15 @@ function StudentsTab() {
               {filtered.map((approval) => {
                 const pid = approval.principal.toString();
                 return (
-                  <TableRow key={pid} className="group">
-                    <TableCell className="font-mono text-xs text-muted-foreground max-w-[200px] truncate">
+                  <TableRow
+                    key={pid}
+                    className="group"
+                    style={{ borderBottom: "1px solid oklch(0.20 0.06 295)" }}
+                  >
+                    <TableCell
+                      className="font-mono text-xs max-w-[200px] truncate"
+                      style={{ color: "oklch(0.60 0.06 295)" }}
+                    >
                       {pid}
                     </TableCell>
                     <TableCell>
@@ -228,7 +294,11 @@ function StudentsTab() {
                             onClick={() => handleApprove(approval.principal)}
                             disabled={setApproval.isPending}
                             className="h-7 text-xs gap-1"
-                            style={{ borderColor: "oklch(0.52 0.14 165)", color: "oklch(0.38 0.14 165)" }}
+                            style={{
+                              borderColor: "oklch(0.32 0.12 155)",
+                              color: "oklch(0.60 0.18 155)",
+                              background: "transparent",
+                            }}
                           >
                             <Check className="h-3 w-3" />
                             Aprovar
@@ -240,7 +310,12 @@ function StudentsTab() {
                             variant="outline"
                             onClick={() => handleBlock(approval.principal)}
                             disabled={setApproval.isPending}
-                            className="h-7 text-xs gap-1 border-destructive/40 text-destructive hover:bg-destructive/5"
+                            className="h-7 text-xs gap-1"
+                            style={{
+                              borderColor: "oklch(0.32 0.10 27)",
+                              color: "oklch(0.65 0.22 27)",
+                              background: "transparent",
+                            }}
                           >
                             <Ban className="h-3 w-3" />
                             Bloquear
@@ -263,18 +338,21 @@ function StudentsTab() {
 
 function CoursesTab() {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [expandedCourses, setExpandedCourses] = useState<Set<string>>(
+    new Set(),
+  );
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(
+    new Set(),
+  );
 
-  // New course form
   const [newCourseTitle, setNewCourseTitle] = useState("");
   const [newCourseDesc, setNewCourseDesc] = useState("");
   const [addCourseOpen, setAddCourseOpen] = useState(false);
 
-  // New module form state
-  const [newModuleTitle, setNewModuleTitle] = useState<Record<string, string>>({});
+  const [newModuleTitle, setNewModuleTitle] = useState<Record<string, string>>(
+    {},
+  );
 
-  // New lesson form state
   const [newLessonState, setNewLessonState] = useState<
     Record<string, { title: string; url: string; duration: string }>
   >({});
@@ -319,15 +397,12 @@ function CoursesTab() {
       if (c.id !== courseId) return c;
       return {
         ...c,
-        modules: [
-          ...c.modules,
-          { id: generateId(), title, lessons: [] },
-        ],
+        modules: [...c.modules, { id: generateId(), title, lessons: [] }],
       };
     });
     persist(updated);
     setNewModuleTitle((prev) => ({ ...prev, [courseId]: "" }));
-    toast.success("Modulo adicionado.");
+    toast.success("Módulo adicionado.");
   };
 
   const deleteModule = (courseId: string, moduleId: string) => {
@@ -342,10 +417,10 @@ function CoursesTab() {
     const key = `${courseId}_${moduleId}`;
     const state = newLessonState[key];
     if (!state?.title.trim() || !state?.url.trim()) {
-      toast.error("Preencha titulo e URL do video.");
+      toast.error("Preencha título e URL do vídeo.");
       return;
     }
-    const dur = parseInt(state.duration) || 60;
+    const dur = Number.parseInt(state.duration) || 60;
     const updated = courses.map((c) => {
       if (c.id !== courseId) return c;
       return {
@@ -368,11 +443,18 @@ function CoursesTab() {
       };
     });
     persist(updated);
-    setNewLessonState((prev) => ({ ...prev, [key]: { title: "", url: "", duration: "" } }));
+    setNewLessonState((prev) => ({
+      ...prev,
+      [key]: { title: "", url: "", duration: "" },
+    }));
     toast.success("Aula adicionada.");
   };
 
-  const deleteLesson = (courseId: string, moduleId: string, lessonId: string) => {
+  const deleteLesson = (
+    courseId: string,
+    moduleId: string,
+    lessonId: string,
+  ) => {
     const updated = courses.map((c) => {
       if (c.id !== courseId) return c;
       return {
@@ -389,7 +471,11 @@ function CoursesTab() {
   const toggleCourse = (id: string) => {
     setExpandedCourses((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   };
@@ -397,7 +483,11 @@ function CoursesTab() {
   const toggleModule = (id: string) => {
     setExpandedModules((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   };
@@ -409,40 +499,59 @@ function CoursesTab() {
         <Dialog open={addCourseOpen} onOpenChange={setAddCourseOpen}>
           <DialogTrigger asChild>
             <Button
-              style={{ background: "oklch(var(--navy-deep))", color: "white" }}
-              className="gap-2"
+              className="gap-2 cosmos-glow"
+              style={{ background: "oklch(0.62 0.22 295)", color: "white" }}
             >
               <Plus className="h-4 w-4" />
               Novo curso
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent
+            style={{
+              background: "oklch(0.16 0.06 295)",
+              border: "1px solid oklch(0.28 0.09 295)",
+            }}
+          >
             <DialogHeader>
-              <DialogTitle>Criar novo curso</DialogTitle>
+              <DialogTitle style={{ color: "oklch(0.93 0.02 295)" }}>
+                Criar novo curso
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-2">
               <div className="space-y-1.5">
-                <Label>Titulo</Label>
+                <Label style={{ color: "oklch(0.75 0.06 295)" }}>Título</Label>
                 <Input
                   value={newCourseTitle}
                   onChange={(e) => setNewCourseTitle(e.target.value)}
-                  placeholder="Titulo do curso"
+                  placeholder="Título do curso"
+                  style={{
+                    background: "oklch(0.20 0.07 295)",
+                    borderColor: "oklch(0.30 0.09 295)",
+                    color: "oklch(0.90 0.02 295)",
+                  }}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Descricao</Label>
+                <Label style={{ color: "oklch(0.75 0.06 295)" }}>
+                  Descrição
+                </Label>
                 <Textarea
                   value={newCourseDesc}
                   onChange={(e) => setNewCourseDesc(e.target.value)}
-                  placeholder="Descricao breve"
+                  placeholder="Descrição breve"
                   rows={3}
+                  style={{
+                    background: "oklch(0.20 0.07 295)",
+                    borderColor: "oklch(0.30 0.09 295)",
+                    color: "oklch(0.90 0.02 295)",
+                  }}
                 />
               </div>
               <Button
                 onClick={addCourse}
                 disabled={!newCourseTitle.trim()}
-                className="w-full"
-                style={{ background: "oklch(var(--navy-deep))", color: "white" }}
+                className="w-full cosmos-glow"
+                style={{ background: "oklch(0.62 0.22 295)", color: "white" }}
               >
                 Criar curso
               </Button>
@@ -452,9 +561,20 @@ function CoursesTab() {
       </div>
 
       {courses.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-12 text-center">
-          <BookOpen className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">Nenhum curso criado.</p>
+        <div
+          className="rounded-xl p-12 text-center"
+          style={{
+            background: "oklch(0.14 0.05 295)",
+            border: "1px dashed oklch(0.28 0.08 295)",
+          }}
+        >
+          <BookOpen
+            className="h-8 w-8 mx-auto mb-3"
+            style={{ color: "oklch(0.38 0.06 295)" }}
+          />
+          <p className="text-sm" style={{ color: "oklch(0.55 0.06 295)" }}>
+            Nenhum curso criado.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -463,13 +583,13 @@ function CoursesTab() {
             return (
               <div
                 key={course.id}
-                className="rounded-lg border border-border overflow-hidden"
-                style={{ boxShadow: "0 1px 3px oklch(0.22 0.065 258 / 0.06)" }}
+                className="rounded-xl overflow-hidden"
+                style={{ border: "1px solid oklch(0.24 0.07 295)" }}
               >
                 {/* Course header */}
                 <div
                   className="flex items-center justify-between px-4 py-3"
-                  style={{ background: "oklch(var(--navy-pale))" }}
+                  style={{ background: "oklch(0.16 0.06 295)" }}
                 >
                   <button
                     type="button"
@@ -477,14 +597,30 @@ function CoursesTab() {
                     className="flex items-center gap-2 flex-1 text-left"
                   >
                     {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <ChevronDown
+                        className="h-4 w-4"
+                        style={{ color: "oklch(0.55 0.06 295)" }}
+                      />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight
+                        className="h-4 w-4"
+                        style={{ color: "oklch(0.55 0.06 295)" }}
+                      />
                     )}
                     <div>
-                      <p className="font-medium text-sm">{course.title}</p>
+                      <p
+                        className="font-medium text-sm"
+                        style={{ color: "oklch(0.90 0.02 295)" }}
+                      >
+                        {course.title}
+                      </p>
                       {course.description && (
-                        <p className="text-xs text-muted-foreground">{course.description}</p>
+                        <p
+                          className="text-xs"
+                          style={{ color: "oklch(0.55 0.06 295)" }}
+                        >
+                          {course.description}
+                        </p>
                       )}
                     </div>
                   </button>
@@ -492,21 +628,59 @@ function CoursesTab() {
                     <AlertDialogTrigger asChild>
                       <button
                         type="button"
-                        className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
+                        className="h-7 w-7 flex items-center justify-center rounded transition-colors"
+                        style={{ color: "oklch(0.52 0.06 295)" }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.color =
+                            "oklch(0.65 0.22 27)";
+                          (e.currentTarget as HTMLElement).style.background =
+                            "oklch(0.22 0.08 27)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.color =
+                            "oklch(0.52 0.06 295)";
+                          (e.currentTarget as HTMLElement).style.background =
+                            "transparent";
+                        }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent
+                      style={{
+                        background: "oklch(0.16 0.06 295)",
+                        border: "1px solid oklch(0.28 0.09 295)",
+                      }}
+                    >
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir curso?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta acao nao pode ser desfeita.
+                        <AlertDialogTitle
+                          style={{ color: "oklch(0.93 0.02 295)" }}
+                        >
+                          Excluir curso?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription
+                          style={{ color: "oklch(0.60 0.06 295)" }}
+                        >
+                          Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteCourse(course.id)}>
+                        <AlertDialogCancel
+                          style={{
+                            background: "oklch(0.20 0.07 295)",
+                            borderColor: "oklch(0.30 0.09 295)",
+                            color: "oklch(0.80 0.04 295)",
+                          }}
+                        >
+                          Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteCourse(course.id)}
+                          style={{
+                            background: "oklch(0.65 0.22 27)",
+                            color: "white",
+                          }}
+                        >
                           Excluir
                         </AlertDialogAction>
                       </AlertDialogFooter>
@@ -515,55 +689,118 @@ function CoursesTab() {
                 </div>
 
                 {isExpanded && (
-                  <div className="p-4 space-y-4">
+                  <div
+                    className="p-4 space-y-4"
+                    style={{ background: "oklch(0.13 0.05 295)" }}
+                  >
                     {/* Modules */}
                     {course.modules.map((mod: Module) => {
                       const modExpanded = expandedModules.has(mod.id);
                       return (
-                        <div key={mod.id} className="border border-border rounded-md overflow-hidden">
-                          <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
+                        <div
+                          key={mod.id}
+                          className="rounded-lg overflow-hidden"
+                          style={{ border: "1px solid oklch(0.24 0.07 295)" }}
+                        >
+                          <div
+                            className="flex items-center justify-between px-3 py-2"
+                            style={{ background: "oklch(0.16 0.06 295)" }}
+                          >
                             <button
                               type="button"
                               onClick={() => toggleModule(mod.id)}
                               className="flex items-center gap-2 flex-1 text-left"
                             >
                               {modExpanded ? (
-                                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                <ChevronDown
+                                  className="h-3.5 w-3.5"
+                                  style={{ color: "oklch(0.55 0.06 295)" }}
+                                />
                               ) : (
-                                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                                <ChevronRight
+                                  className="h-3.5 w-3.5"
+                                  style={{ color: "oklch(0.55 0.06 295)" }}
+                                />
                               )}
-                              <span className="text-sm font-medium">{mod.title}</span>
-                              <Badge variant="secondary" className="text-xs">
+                              <span
+                                className="text-sm font-medium"
+                                style={{ color: "oklch(0.85 0.04 295)" }}
+                              >
+                                {mod.title}
+                              </span>
+                              <Badge
+                                variant="secondary"
+                                className="text-xs"
+                                style={{
+                                  background: "oklch(0.22 0.08 295)",
+                                  color: "oklch(0.65 0.12 295)",
+                                }}
+                              >
                                 {mod.lessons.length} aulas
                               </Badge>
                             </button>
                             <button
                               type="button"
                               onClick={() => deleteModule(course.id, mod.id)}
-                              className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive transition-colors"
+                              className="h-6 w-6 flex items-center justify-center rounded transition-colors"
+                              style={{ color: "oklch(0.50 0.06 295)" }}
+                              onMouseEnter={(e) => {
+                                (e.currentTarget as HTMLElement).style.color =
+                                  "oklch(0.65 0.22 27)";
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.currentTarget as HTMLElement).style.color =
+                                  "oklch(0.50 0.06 295)";
+                              }}
                             >
                               <Trash2 className="h-3 w-3" />
                             </button>
                           </div>
 
                           {modExpanded && (
-                            <div className="p-3 space-y-2">
+                            <div
+                              className="p-3 space-y-2"
+                              style={{ background: "oklch(0.12 0.04 295)" }}
+                            >
                               {/* Lessons list */}
                               {mod.lessons.map((lesson: Lesson) => (
                                 <div
                                   key={lesson.id}
-                                  className="flex items-center justify-between gap-2 rounded px-2 py-1.5 bg-muted/20"
+                                  className="flex items-center justify-between gap-2 rounded px-2 py-1.5"
+                                  style={{ background: "oklch(0.16 0.06 295)" }}
                                 >
                                   <div className="min-w-0">
-                                    <p className="text-sm truncate">{lesson.title}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {formatDuration(lesson.duration)} &bull; {lesson.videoUrl.substring(0, 40)}...
+                                    <p
+                                      className="text-sm truncate"
+                                      style={{ color: "oklch(0.82 0.04 295)" }}
+                                    >
+                                      {lesson.title}
+                                    </p>
+                                    <p
+                                      className="text-xs"
+                                      style={{ color: "oklch(0.52 0.06 295)" }}
+                                    >
+                                      {formatDuration(lesson.duration)} &bull;{" "}
+                                      {lesson.videoUrl.substring(0, 40)}...
                                     </p>
                                   </div>
                                   <button
                                     type="button"
-                                    onClick={() => deleteLesson(course.id, mod.id, lesson.id)}
-                                    className="h-6 w-6 flex shrink-0 items-center justify-center rounded text-muted-foreground hover:text-destructive transition-colors"
+                                    onClick={() =>
+                                      deleteLesson(course.id, mod.id, lesson.id)
+                                    }
+                                    className="h-6 w-6 flex shrink-0 items-center justify-center rounded transition-colors"
+                                    style={{ color: "oklch(0.50 0.06 295)" }}
+                                    onMouseEnter={(e) => {
+                                      (
+                                        e.currentTarget as HTMLElement
+                                      ).style.color = "oklch(0.65 0.22 27)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      (
+                                        e.currentTarget as HTMLElement
+                                      ).style.color = "oklch(0.50 0.06 295)";
+                                    }}
                                   >
                                     <Trash2 className="h-3 w-3" />
                                   </button>
@@ -572,12 +809,24 @@ function CoursesTab() {
 
                               {/* Add lesson form */}
                               <div
-                                className="rounded border border-dashed border-border p-3 space-y-2"
+                                className="rounded border p-3 space-y-2"
+                                style={{
+                                  borderColor: "oklch(0.28 0.08 295)",
+                                  borderStyle: "dashed",
+                                }}
                               >
-                                <p className="text-xs font-medium text-muted-foreground mb-2">Adicionar aula</p>
+                                <p
+                                  className="text-xs font-medium mb-2"
+                                  style={{ color: "oklch(0.58 0.08 295)" }}
+                                >
+                                  Adicionar aula
+                                </p>
                                 <Input
-                                  placeholder="Titulo da aula"
-                                  value={newLessonState[`${course.id}_${mod.id}`]?.title ?? ""}
+                                  placeholder="Título da aula"
+                                  value={
+                                    newLessonState[`${course.id}_${mod.id}`]
+                                      ?.title ?? ""
+                                  }
                                   onChange={(e) =>
                                     setNewLessonState((prev) => ({
                                       ...prev,
@@ -588,10 +837,18 @@ function CoursesTab() {
                                     }))
                                   }
                                   className="h-8 text-sm"
+                                  style={{
+                                    background: "oklch(0.18 0.06 295)",
+                                    borderColor: "oklch(0.28 0.08 295)",
+                                    color: "oklch(0.85 0.04 295)",
+                                  }}
                                 />
                                 <Input
                                   placeholder="URL do YouTube"
-                                  value={newLessonState[`${course.id}_${mod.id}`]?.url ?? ""}
+                                  value={
+                                    newLessonState[`${course.id}_${mod.id}`]
+                                      ?.url ?? ""
+                                  }
                                   onChange={(e) =>
                                     setNewLessonState((prev) => ({
                                       ...prev,
@@ -602,11 +859,19 @@ function CoursesTab() {
                                     }))
                                   }
                                   className="h-8 text-sm"
+                                  style={{
+                                    background: "oklch(0.18 0.06 295)",
+                                    borderColor: "oklch(0.28 0.08 295)",
+                                    color: "oklch(0.85 0.04 295)",
+                                  }}
                                 />
                                 <Input
-                                  placeholder="Duracao em segundos (ex: 300)"
+                                  placeholder="Duração em segundos (ex: 300)"
                                   type="number"
-                                  value={newLessonState[`${course.id}_${mod.id}`]?.duration ?? ""}
+                                  value={
+                                    newLessonState[`${course.id}_${mod.id}`]
+                                      ?.duration ?? ""
+                                  }
                                   onChange={(e) =>
                                     setNewLessonState((prev) => ({
                                       ...prev,
@@ -617,12 +882,20 @@ function CoursesTab() {
                                     }))
                                   }
                                   className="h-8 text-sm"
+                                  style={{
+                                    background: "oklch(0.18 0.06 295)",
+                                    borderColor: "oklch(0.28 0.08 295)",
+                                    color: "oklch(0.85 0.04 295)",
+                                  }}
                                 />
                                 <Button
                                   size="sm"
                                   onClick={() => addLesson(course.id, mod.id)}
                                   className="h-7 text-xs gap-1"
-                                  style={{ background: "oklch(var(--navy-deep))", color: "white" }}
+                                  style={{
+                                    background: "oklch(0.62 0.22 295)",
+                                    color: "white",
+                                  }}
                                 >
                                   <Plus className="h-3 w-3" />
                                   Adicionar aula
@@ -637,7 +910,7 @@ function CoursesTab() {
                     {/* Add module */}
                     <div className="flex gap-2">
                       <Input
-                        placeholder="Nome do novo modulo"
+                        placeholder="Nome do novo módulo"
                         value={newModuleTitle[course.id] ?? ""}
                         onChange={(e) =>
                           setNewModuleTitle((prev) => ({
@@ -646,16 +919,24 @@ function CoursesTab() {
                           }))
                         }
                         className="h-8 text-sm"
+                        style={{
+                          background: "oklch(0.18 0.06 295)",
+                          borderColor: "oklch(0.28 0.08 295)",
+                          color: "oklch(0.85 0.04 295)",
+                        }}
                       />
                       <Button
                         size="sm"
                         onClick={() => addModule(course.id)}
                         disabled={!newModuleTitle[course.id]?.trim()}
                         className="h-8 text-xs gap-1 shrink-0"
-                        style={{ background: "oklch(var(--navy-deep))", color: "white" }}
+                        style={{
+                          background: "oklch(0.62 0.22 295)",
+                          color: "white",
+                        }}
                       >
                         <Plus className="h-3 w-3" />
-                        Modulo
+                        Módulo
                       </Button>
                     </div>
                   </div>
@@ -688,13 +969,15 @@ function ReportsTab() {
     if (localProf) {
       lines.push(`CPF: ${localProf.cpf}`);
       lines.push(`Telefone: ${localProf.phone}`);
-      if (localProf.company) lines.push(`Empresa: ${localProf.company}`);
+      lines.push(`E-mail: ${localProf.email}`);
     }
 
     lines.push("\n--- Progresso nos Cursos ---");
     for (const course of courses) {
       const prog = calculateCourseProgress(principalId, course);
-      lines.push(`${course.title}: ${prog.completed}/${prog.total} aulas (${prog.percentage}%)`);
+      lines.push(
+        `${course.title}: ${prog.completed}/${prog.total} aulas (${prog.percentage}%)`,
+      );
     }
 
     lines.push("\n--- Certificados Emitidos ---");
@@ -702,7 +985,9 @@ function ReportsTab() {
       lines.push("Nenhum certificado emitido.");
     } else {
       for (const cert of certs) {
-        lines.push(`${cert.courseName} - ${new Date(cert.completionDate).toLocaleDateString("pt-BR")} (Cod: ${cert.code})`);
+        lines.push(
+          `${cert.courseName} - ${new Date(cert.completionDate).toLocaleDateString("pt-BR")} (Cód: ${cert.code})`,
+        );
       }
     }
 
@@ -736,27 +1021,40 @@ function ReportsTab() {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-12 w-full" />
+          <Skeleton
+            key={i}
+            className="h-12 w-full"
+            style={{ background: "oklch(0.18 0.06 295)" }}
+          />
         ))}
       </div>
     );
   }
 
   const approved = (approvals ?? []).filter(
-    (a) => a.status === ApprovalStatus.approved
+    (a) => a.status === ApprovalStatus.approved,
   );
 
   return (
     <div>
-      <p className="text-sm text-muted-foreground mb-4">
+      <p className="text-sm mb-4" style={{ color: "oklch(0.58 0.06 295)" }}>
         {approved.length} aluno(s) aprovado(s)
       </p>
 
       {approved.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-12 text-center">
-          <BarChart3 className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">
-            Nenhum aluno aprovado para exibir relatorios.
+        <div
+          className="rounded-xl p-12 text-center"
+          style={{
+            background: "oklch(0.14 0.05 295)",
+            border: "1px dashed oklch(0.28 0.08 295)",
+          }}
+        >
+          <BarChart3
+            className="h-8 w-8 mx-auto mb-3"
+            style={{ color: "oklch(0.38 0.06 295)" }}
+          />
+          <p className="text-sm" style={{ color: "oklch(0.55 0.06 295)" }}>
+            Nenhum aluno aprovado para exibir relatórios.
           </p>
         </div>
       ) : (
@@ -775,25 +1073,51 @@ function ReportsTab() {
             return (
               <div
                 key={pid}
-                className="rounded-lg border border-border overflow-hidden"
+                className="rounded-xl overflow-hidden"
+                style={{ border: "1px solid oklch(0.24 0.07 295)" }}
               >
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 text-left"
+                  className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
+                  style={{ background: "oklch(0.14 0.05 295)" }}
                   onClick={() => setExpandedStudent(isExpanded ? null : pid)}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background =
+                      "oklch(0.16 0.06 295)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background =
+                      "oklch(0.14 0.05 295)";
+                  }}
                 >
                   <div className="flex items-center gap-3">
                     {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <ChevronDown
+                        className="h-4 w-4"
+                        style={{ color: "oklch(0.55 0.06 295)" }}
+                      />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight
+                        className="h-4 w-4"
+                        style={{ color: "oklch(0.55 0.06 295)" }}
+                      />
                     )}
                     <div>
-                      <p className="text-sm font-medium">
-                        {localProf?.cpf ? `CPF: ${localProf.cpf}` : pid.substring(0, 16) + "..."}
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: "oklch(0.85 0.04 295)" }}
+                      >
+                        {localProf?.cpf
+                          ? `CPF: ${localProf.cpf}`
+                          : `${pid.substring(0, 16)}...`}
                       </p>
-                      {localProf?.company && (
-                        <p className="text-xs text-muted-foreground">{localProf.company}</p>
+                      {localProf?.email && (
+                        <p
+                          className="text-xs"
+                          style={{ color: "oklch(0.55 0.06 295)" }}
+                        >
+                          {localProf.email}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -802,7 +1126,10 @@ function ReportsTab() {
                       <Badge
                         variant="outline"
                         className="text-xs border-none"
-                        style={{ background: "oklch(0.94 0.05 165)", color: "oklch(0.38 0.14 165)" }}
+                        style={{
+                          background: "oklch(0.22 0.08 155)",
+                          color: "oklch(0.65 0.18 155)",
+                        }}
                       >
                         Certificado
                       </Badge>
@@ -815,6 +1142,11 @@ function ReportsTab() {
                         exportPDF(pid);
                       }}
                       className="h-7 text-xs gap-1"
+                      style={{
+                        borderColor: "oklch(0.30 0.09 295)",
+                        color: "oklch(0.65 0.14 295)",
+                        background: "transparent",
+                      }}
                     >
                       <FileText className="h-3 w-3" />
                       PDF
@@ -823,32 +1155,50 @@ function ReportsTab() {
                 </button>
 
                 {isExpanded && (
-                  <div className="px-4 pb-4 border-t border-border space-y-4 pt-4">
+                  <div
+                    className="px-4 pb-4 space-y-4 pt-4"
+                    style={{
+                      borderTop: "1px solid oklch(0.22 0.07 295)",
+                      background: "oklch(0.12 0.04 295)",
+                    }}
+                  >
                     {/* Summary stats */}
                     <div className="grid grid-cols-3 gap-3">
-                      <div className="rounded-lg bg-muted/30 p-3 text-center">
-                        <p className="text-lg font-semibold" style={{ color: "oklch(var(--navy-deep))" }}>
-                          {logs.length}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Sessoes</p>
-                      </div>
-                      <div className="rounded-lg bg-muted/30 p-3 text-center">
-                        <p className="text-lg font-semibold" style={{ color: "oklch(var(--navy-deep))" }}>
-                          {Math.round(totalLogTime / 60000)}m
-                        </p>
-                        <p className="text-xs text-muted-foreground">Tempo total</p>
-                      </div>
-                      <div className="rounded-lg bg-muted/30 p-3 text-center">
-                        <p className="text-lg font-semibold" style={{ color: "oklch(var(--navy-deep))" }}>
-                          {certs.length}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Certificados</p>
-                      </div>
+                      {[
+                        { label: "Sessões", value: logs.length },
+                        {
+                          label: "Tempo total",
+                          value: `${Math.round(totalLogTime / 60000)}m`,
+                        },
+                        { label: "Certificados", value: certs.length },
+                      ].map(({ label, value }) => (
+                        <div
+                          key={label}
+                          className="rounded-lg p-3 text-center"
+                          style={{ background: "oklch(0.16 0.06 295)" }}
+                        >
+                          <p
+                            className="text-lg font-display font-semibold"
+                            style={{ color: "oklch(0.82 0.18 295)" }}
+                          >
+                            {value}
+                          </p>
+                          <p
+                            className="text-xs"
+                            style={{ color: "oklch(0.52 0.06 295)" }}
+                          >
+                            {label}
+                          </p>
+                        </div>
+                      ))}
                     </div>
 
                     {/* Per-course progress */}
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                      <p
+                        className="text-xs font-semibold uppercase tracking-wider mb-2"
+                        style={{ color: "oklch(0.52 0.08 295)" }}
+                      >
                         Progresso por curso
                       </p>
                       <div className="space-y-2">
@@ -856,19 +1206,31 @@ function ReportsTab() {
                           const prog = calculateCourseProgress(pid, c);
                           return (
                             <div key={c.id} className="flex items-center gap-3">
-                              <p className="text-sm flex-1 truncate">{c.title}</p>
-                              <div className="w-24 h-1.5 rounded-full bg-border overflow-hidden">
+                              <p
+                                className="text-sm flex-1 truncate"
+                                style={{ color: "oklch(0.72 0.04 295)" }}
+                              >
+                                {c.title}
+                              </p>
+                              <div
+                                className="w-24 h-1.5 rounded-full overflow-hidden"
+                                style={{ background: "oklch(0.22 0.07 295)" }}
+                              >
                                 <div
                                   className="h-full rounded-full"
                                   style={{
                                     width: `${prog.percentage}%`,
-                                    background: prog.percentage === 100
-                                      ? "oklch(0.52 0.14 165)"
-                                      : "oklch(var(--navy-mid))",
+                                    background:
+                                      prog.percentage === 100
+                                        ? "oklch(0.60 0.18 155)"
+                                        : "oklch(0.62 0.22 295)",
                                   }}
                                 />
                               </div>
-                              <span className="text-xs font-medium w-10 text-right">
+                              <span
+                                className="text-xs font-medium w-10 text-right"
+                                style={{ color: "oklch(0.65 0.10 295)" }}
+                              >
                                 {prog.percentage}%
                               </span>
                             </div>
@@ -880,20 +1242,41 @@ function ReportsTab() {
                     {/* Recent logs */}
                     {logs.length > 0 && (
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                          Ultimas sessoes
+                        <p
+                          className="text-xs font-semibold uppercase tracking-wider mb-2"
+                          style={{ color: "oklch(0.52 0.08 295)" }}
+                        >
+                          Últimas sessões
                         </p>
                         <div className="space-y-1 max-h-40 overflow-y-auto">
-                          {logs.slice(-5).reverse().map((log) => (
-                            <div key={log.sessionStart} className="flex items-center justify-between text-xs py-1 border-b border-border/50">
-                              <span className="text-muted-foreground">{formatDate(log.sessionStart)}</span>
-                              {log.sessionEnd && (
-                                <span className="text-muted-foreground">
-                                  {Math.round((log.sessionEnd - log.sessionStart) / 60000)}m
+                          {logs
+                            .slice(-5)
+                            .reverse()
+                            .map((log) => (
+                              <div
+                                key={log.sessionStart}
+                                className="flex items-center justify-between text-xs py-1"
+                                style={{
+                                  borderBottom:
+                                    "1px solid oklch(0.20 0.06 295)",
+                                }}
+                              >
+                                <span style={{ color: "oklch(0.55 0.06 295)" }}>
+                                  {formatDate(log.sessionStart)}
                                 </span>
-                              )}
-                            </div>
-                          ))}
+                                {log.sessionEnd && (
+                                  <span
+                                    style={{ color: "oklch(0.55 0.06 295)" }}
+                                  >
+                                    {Math.round(
+                                      (log.sessionEnd - log.sessionStart) /
+                                        60000,
+                                    )}
+                                    m
+                                  </span>
+                                )}
+                              </div>
+                            ))}
                         </div>
                       </div>
                     )}
@@ -923,38 +1306,65 @@ export default function AdminPage() {
             <div className="flex items-center gap-2 mb-1">
               <div
                 className="flex h-6 w-6 items-center justify-center rounded"
-                style={{ background: "oklch(var(--navy-pale))" }}
+                style={{ background: "oklch(0.20 0.08 295)" }}
               >
-                <GraduationCap className="h-3.5 w-3.5" style={{ color: "oklch(var(--navy-deep))" }} />
+                <GraduationCap
+                  className="h-3.5 w-3.5"
+                  style={{ color: "oklch(0.72 0.18 295)" }}
+                />
               </div>
               <h1
-                className="text-xl font-semibold tracking-tight"
-                style={{ color: "oklch(var(--navy-deep))" }}
+                className="text-xl font-display font-semibold tracking-tight"
+                style={{ color: "oklch(0.93 0.02 295)" }}
               >
                 Painel Administrativo
               </h1>
             </div>
-            <p className="text-sm text-muted-foreground ml-8">
+            <p
+              className="text-sm ml-8"
+              style={{ color: "oklch(0.55 0.06 295)" }}
+            >
               Gerencie alunos, cursos e relatórios
             </p>
           </div>
         </div>
 
-        <Separator className="mb-6" />
+        <Separator
+          style={{ background: "oklch(0.22 0.07 295)" }}
+          className="mb-6"
+        />
 
         <Tabs defaultValue="students">
-          <TabsList className="mb-6 h-9">
-            <TabsTrigger value="students" className="gap-2 text-xs">
+          <TabsList
+            className="mb-6 h-9"
+            style={{
+              background: "oklch(0.16 0.06 295)",
+              border: "1px solid oklch(0.26 0.08 295)",
+            }}
+          >
+            <TabsTrigger
+              value="students"
+              className="gap-2 text-xs data-[state=active]:text-white"
+              style={{ color: "oklch(0.65 0.06 295)" }}
+            >
               <Users className="h-3.5 w-3.5" />
               Alunos
             </TabsTrigger>
-            <TabsTrigger value="courses" className="gap-2 text-xs">
+            <TabsTrigger
+              value="courses"
+              className="gap-2 text-xs data-[state=active]:text-white"
+              style={{ color: "oklch(0.65 0.06 295)" }}
+            >
               <BookOpen className="h-3.5 w-3.5" />
               Cursos
             </TabsTrigger>
-            <TabsTrigger value="reports" className="gap-2 text-xs">
+            <TabsTrigger
+              value="reports"
+              className="gap-2 text-xs data-[state=active]:text-white"
+              style={{ color: "oklch(0.65 0.06 295)" }}
+            >
               <BarChart3 className="h-3.5 w-3.5" />
-              Relatorios
+              Relatórios
             </TabsTrigger>
           </TabsList>
 
@@ -972,14 +1382,20 @@ export default function AdminPage() {
         </Tabs>
       </main>
 
-      <footer className="border-t border-border py-6 mt-16">
-        <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
-          &copy; 2026. Built with love using{" "}
+      <footer
+        className="py-6 mt-16"
+        style={{ borderTop: "1px solid oklch(0.20 0.06 295)" }}
+      >
+        <div
+          className="container mx-auto px-4 text-center text-xs"
+          style={{ color: "oklch(0.40 0.05 295)" }}
+        >
+          &copy; {new Date().getFullYear()}. Built with ♥ using{" "}
           <a
-            href="https://caffeine.ai"
+            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-foreground"
+            className="underline underline-offset-2 hover:opacity-80"
           >
             caffeine.ai
           </a>

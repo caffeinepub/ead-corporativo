@@ -16,9 +16,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["IBM Plex Sans", "system-ui", "sans-serif"],
-        serif: ["IBM Plex Serif", "Georgia", "serif"],
-        mono: ["IBM Plex Mono", "monospace"],
+        sans: ['Outfit', 'sans-serif'],
+        display: ['Fraunces', 'serif'],
+        serif: ['Fraunces', 'serif'],
+        mono: ['monospace'],
       },
       colors: {
         border: "oklch(var(--border))",
@@ -79,11 +80,13 @@ export default {
           border: "oklch(var(--sidebar-border))",
           ring: "oklch(var(--sidebar-ring))",
         },
-        navy: {
-          deep: "oklch(var(--navy-deep))",
-          mid: "oklch(var(--navy-mid))",
-          light: "oklch(var(--navy-light))",
-          pale: "oklch(var(--navy-pale))",
+        cosmos: {
+          deep: "oklch(var(--cosmos-deep))",
+          mid: "oklch(var(--cosmos-mid))",
+          bright: "oklch(var(--cosmos-bright))",
+          glow: "oklch(var(--cosmos-glow))",
+          accent: "oklch(var(--cosmos-accent))",
+          star: "oklch(var(--cosmos-star))",
         },
       },
       borderRadius: {
@@ -92,10 +95,10 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        xs: "0 1px 2px 0 rgba(0,0,0,0.05)",
-        card: "0 1px 3px 0 rgba(13,43,85,0.08), 0 1px 2px -1px rgba(13,43,85,0.06)",
-        "card-hover": "0 4px 12px 0 rgba(13,43,85,0.12), 0 2px 4px -1px rgba(13,43,85,0.08)",
-        navy: "0 4px 20px rgba(13,43,85,0.18)",
+        xs: "0 1px 2px 0 rgba(0,0,0,0.2)",
+        card: "0 1px 3px 0 rgba(0,0,0,0.3), 0 1px 2px -1px rgba(0,0,0,0.2)",
+        "card-hover": "0 4px 12px 0 rgba(0,0,0,0.4), 0 0 20px oklch(0.62 0.22 295 / 0.15)",
+        cosmos: "0 0 20px oklch(0.62 0.22 295 / 0.3), 0 0 60px oklch(0.62 0.22 295 / 0.1)",
       },
       keyframes: {
         "accordion-down": {

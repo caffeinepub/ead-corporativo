@@ -1,30 +1,30 @@
-import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Award,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Lock,
+  Pause,
+  Play,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { navigate } from "../App";
 import AppHeader from "../components/AppHeader";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useUserProfile } from "../hooks/useQueries";
 import {
+  generateCertCode,
+  getCertificateForStudent,
   getCourse,
   getProgress,
-  updateLessonProgress,
-  saveCertificate,
-  getCertificateForStudent,
-  generateCertCode,
   isCourseComplete,
+  saveCertificate,
+  updateLessonProgress,
 } from "../lib/ead-storage";
-import { navigate } from "../App";
 import type { Course, Lesson } from "../lib/ead-types";
-import {
-  ChevronLeft,
-  Play,
-  Pause,
-  CheckCircle,
-  Award,
-  ChevronRight,
-  Lock,
-  Clock,
-} from "lucide-react";
-import { toast } from "sonner";
 
 interface LessonPageProps {
   courseId: string;
@@ -64,14 +64,12 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
   const intervalRef = useRef<number | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Load course + lesson data
   useEffect(() => {
     if (!courseId || !lessonId) return;
     const c = getCourse(courseId);
     if (!c) return;
     setCourse(c);
 
-    // Find lesson and next lesson
     let found: Lesson | null = null;
     let next: Lesson | null = null;
     let foundIt = false;
@@ -86,7 +84,7 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
           foundIt = true;
           if (i + 1 < mod.lessons.length) {
             next = mod.lessons[i + 1];
-            foundIt = false; // stop looking in this module
+            foundIt = false;
           }
         }
       }
@@ -95,7 +93,6 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
     setLesson(found);
     setNextLesson(next);
 
-    // Load saved progress
     if (found) {
       const progress = getProgress(principal);
       const lp = progress[lessonId];
@@ -106,7 +103,6 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
     }
   }, [courseId, lessonId, principal]);
 
-  // Interval-based watch timer
   const stopTimer = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -125,8 +121,11 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
           setIsCompleted(true);
           setIsPlaying(false);
           stopTimer();
-          // Check if full course is complete → issue certificate
-          if (course && profile?.name && !getCertificateForStudent(principal, course.id)) {
+          if (
+            course &&
+            profile?.name &&
+            !getCertificateForStudent(principal, course.id)
+          ) {
             const freshCourse = getCourse(course.id);
             if (freshCourse && isCourseComplete(principal, freshCourse)) {
               const code = generateCertCode(principal, course.id);
@@ -139,7 +138,7 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
                 completionDate: Date.now(),
                 principalId: principal,
               });
-              toast.success("Curso concluido! Certificado emitido.");
+              toast.success("Curso concluído! Certificado emitido.");
             }
           }
         }
@@ -171,7 +170,10 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader userName={profile?.name} />
-        <main className="container mx-auto px-4 py-8 text-center text-muted-foreground">
+        <main
+          className="container mx-auto px-4 py-8 text-center"
+          style={{ color: "oklch(0.58 0.06 295)" }}
+        >
           Aula não encontrada.
         </main>
       </div>
@@ -185,7 +187,7 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
 
   const watchedPct = Math.min(
     Math.round((secondsWatched / lesson.duration) * 100),
-    100
+    100,
   );
   const remaining = Math.max(lesson.duration - secondsWatched, 0);
 
@@ -198,7 +200,8 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
         <button
           type="button"
           onClick={() => navigate(`/course/${courseId}`)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="flex items-center gap-1.5 text-sm mb-4 transition-opacity hover:opacity-70"
+          style={{ color: "oklch(0.58 0.06 295)" }}
         >
           <ChevronLeft className="h-4 w-4" />
           {course.title}
@@ -208,15 +211,15 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
           {/* Main: video */}
           <div className="lg:col-span-2">
             <h1
-              className="text-xl font-semibold mb-4 tracking-tight"
-              style={{ color: "oklch(var(--navy-deep))" }}
+              className="text-xl font-display font-semibold mb-4 tracking-tight"
+              style={{ color: "oklch(0.93 0.02 295)" }}
             >
               {lesson.title}
             </h1>
 
             {/* Video container */}
             <div
-              className="relative rounded-lg overflow-hidden bg-black"
+              className="relative rounded-xl overflow-hidden bg-black"
               style={{ aspectRatio: "16/9" }}
             >
               {embedUrl ? (
@@ -230,7 +233,10 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
                   style={{ pointerEvents: "none" }}
                 />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-white/60 text-sm">
+                <div
+                  className="absolute inset-0 flex items-center justify-center text-sm"
+                  style={{ color: "oklch(0.50 0.06 295)" }}
+                >
                   URL de vídeo inválida
                 </div>
               )}
@@ -240,25 +246,34 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
                 className="absolute inset-0 flex flex-col justify-end"
                 style={{
                   background:
-                    "linear-gradient(to bottom, transparent 40%, oklch(0.05 0.02 258 / 0.85) 100%)",
+                    "linear-gradient(to bottom, transparent 40%, oklch(0.06 0.04 295 / 0.92) 100%)",
                 }}
               >
                 <div className="p-4">
                   {/* Progress bar */}
                   <div className="mb-3">
-                    <div className="flex justify-between text-xs text-white/70 mb-1.5">
+                    <div
+                      className="flex justify-between text-xs mb-1.5"
+                      style={{ color: "oklch(0.65 0.04 295)" }}
+                    >
                       <span>{formatTime(secondsWatched)}</span>
-                      <span className="font-medium text-white">
+                      <span
+                        className="font-medium"
+                        style={{ color: "oklch(0.85 0.02 295)" }}
+                      >
                         {watchedPct}% assistido
                       </span>
                       <span>{formatTime(lesson.duration)}</span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-white/20 overflow-hidden cursor-not-allowed">
+                    <div
+                      className="h-1.5 rounded-full overflow-hidden cursor-not-allowed"
+                      style={{ background: "oklch(0.30 0.06 295 / 0.5)" }}
+                    >
                       <div
                         className="h-full rounded-full transition-all duration-1000 ease-linear"
                         style={{
                           width: `${watchedPct}%`,
-                          background: "oklch(0.65 0.18 255)",
+                          background: "oklch(0.72 0.22 295)",
                         }}
                       />
                     </div>
@@ -270,9 +285,9 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
                       <button
                         type="button"
                         onClick={handlePlayPause}
-                        className="flex h-9 w-9 items-center justify-center rounded-full transition-colors"
+                        className="flex h-9 w-9 items-center justify-center rounded-full transition-all cosmos-glow"
                         style={{
-                          background: "oklch(0.42 0.15 255)",
+                          background: "oklch(0.62 0.22 295)",
                           color: "white",
                         }}
                       >
@@ -286,23 +301,29 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
                       <div
                         className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium"
                         style={{
-                          background: "oklch(0.94 0.05 165)",
-                          color: "oklch(0.38 0.14 165)",
+                          background: "oklch(0.22 0.08 155)",
+                          color: "oklch(0.72 0.18 155)",
                         }}
                       >
                         <CheckCircle className="h-3.5 w-3.5" />
-                        Aula concluida
+                        Aula concluída
                       </div>
                     )}
 
                     {!isCompleted && (
-                      <div className="flex items-center gap-1.5 text-xs text-white/60">
+                      <div
+                        className="flex items-center gap-1.5 text-xs"
+                        style={{ color: "oklch(0.55 0.06 295)" }}
+                      >
                         <Lock className="h-3 w-3" />
-                        Avanco desabilitado
+                        Avanço desabilitado
                       </div>
                     )}
 
-                    <div className="ml-auto flex items-center gap-1 text-xs text-white/60">
+                    <div
+                      className="ml-auto flex items-center gap-1 text-xs"
+                      style={{ color: "oklch(0.55 0.06 295)" }}
+                    >
                       <Clock className="h-3 w-3" />
                       {formatTime(remaining)} restante
                     </div>
@@ -313,25 +334,44 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
 
             {/* Note about playback */}
             {!isCompleted && (
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Clique em reproduzir e assista sem fechar esta janela para registrar o progresso.
+              <p
+                className="text-xs mt-2 text-center"
+                style={{ color: "oklch(0.48 0.06 295)" }}
+              >
+                Clique em reproduzir e assista sem fechar esta janela para
+                registrar o progresso.
               </p>
             )}
 
             {/* Next lesson button */}
             {isCompleted && nextLesson && (
               <div
-                className="mt-4 rounded-lg p-4 flex items-center justify-between gap-4"
-                style={{ background: "oklch(var(--navy-pale))" }}
+                className="mt-4 rounded-xl p-4 flex items-center justify-between gap-4"
+                style={{
+                  background: "oklch(0.16 0.06 295)",
+                  border: "1px solid oklch(0.28 0.09 295)",
+                }}
               >
                 <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Proxima aula</p>
-                  <p className="text-sm font-medium">{nextLesson.title}</p>
+                  <p
+                    className="text-xs mb-0.5"
+                    style={{ color: "oklch(0.55 0.06 295)" }}
+                  >
+                    Próxima aula
+                  </p>
+                  <p
+                    className="text-sm font-medium"
+                    style={{ color: "oklch(0.90 0.02 295)" }}
+                  >
+                    {nextLesson.title}
+                  </p>
                 </div>
                 <Button
-                  onClick={() => navigate(`/lesson/${courseId}/${nextLesson.id}`)}
-                  style={{ background: "oklch(var(--navy-deep))", color: "white" }}
-                  className="gap-2 shrink-0"
+                  onClick={() =>
+                    navigate(`/lesson/${courseId}/${nextLesson.id}`)
+                  }
+                  className="gap-2 shrink-0 cosmos-glow"
+                  style={{ background: "oklch(0.62 0.22 295)", color: "white" }}
                 >
                   Continuar
                   <ChevronRight className="h-4 w-4" />
@@ -340,46 +380,61 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
             )}
 
             {/* Certificate issued */}
-            {isCompleted && !nextLesson && getCertificateForStudent(principal, course.id) && (
-              <div
-                className="mt-4 rounded-lg p-4 flex items-center justify-between gap-4"
-                style={{ background: "oklch(0.94 0.05 165)" }}
-              >
-                <div>
-                  <p className="text-xs font-medium mb-0.5" style={{ color: "oklch(0.38 0.14 165)" }}>
-                    Curso concluido!
-                  </p>
-                  <p className="text-sm" style={{ color: "oklch(0.42 0.12 165)" }}>
-                    Seu certificado foi emitido.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(`/certificate/${courseId}`)}
-                  className="gap-2 shrink-0 border-none"
+            {isCompleted &&
+              !nextLesson &&
+              getCertificateForStudent(principal, course.id) && (
+                <div
+                  className="mt-4 rounded-xl p-4 flex items-center justify-between gap-4"
                   style={{
-                    background: "oklch(0.38 0.14 165)",
-                    color: "white",
+                    background: "oklch(0.20 0.08 155)",
+                    border: "1px solid oklch(0.32 0.12 155)",
                   }}
                 >
-                  <Award className="h-4 w-4" />
-                  Ver certificado
-                </Button>
-              </div>
-            )}
+                  <div>
+                    <p
+                      className="text-xs font-medium mb-0.5"
+                      style={{ color: "oklch(0.60 0.18 155)" }}
+                    >
+                      Curso concluído!
+                    </p>
+                    <p
+                      className="text-sm"
+                      style={{ color: "oklch(0.75 0.14 155)" }}
+                    >
+                      Seu certificado foi emitido.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/certificate/${courseId}`)}
+                    className="gap-2 shrink-0 border-none"
+                    style={{
+                      background: "oklch(0.40 0.14 155)",
+                      color: "white",
+                    }}
+                  >
+                    <Award className="h-4 w-4" />
+                    Ver certificado
+                  </Button>
+                </div>
+              )}
           </div>
 
           {/* Sidebar: lesson list */}
           <aside>
             <h2
-              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3"
+              className="text-xs font-semibold uppercase tracking-wider mb-3"
+              style={{ color: "oklch(0.52 0.08 295)" }}
             >
-              Conteudo do curso
+              Conteúdo do curso
             </h2>
             <div className="space-y-1 max-h-[60vh] overflow-y-auto pr-1">
               {course.modules.map((mod) => (
                 <div key={mod.id}>
-                  <p className="text-xs font-medium text-muted-foreground px-2 py-1.5 uppercase tracking-wide">
+                  <p
+                    className="text-xs font-medium px-2 py-1.5 uppercase tracking-wide"
+                    style={{ color: "oklch(0.52 0.08 295)" }}
+                  >
                     {mod.title}
                   </p>
                   {mod.lessons.map((l) => {
@@ -392,17 +447,42 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
                         key={l.id}
                         type="button"
                         onClick={() => navigate(`/lesson/${courseId}/${l.id}`)}
-                        className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-left text-sm transition-colors ${
+                        className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-left text-sm transition-colors"
+                        style={
                           current
-                            ? "bg-primary/10 text-primary font-medium"
-                            : "hover:bg-muted/40 text-foreground"
-                        }`}
+                            ? {
+                                background: "oklch(0.20 0.09 295)",
+                                color: "oklch(0.82 0.18 295)",
+                              }
+                            : {
+                                background: "transparent",
+                                color: "oklch(0.72 0.04 295)",
+                              }
+                        }
+                        onMouseEnter={(e) => {
+                          if (!current)
+                            (e.currentTarget as HTMLElement).style.background =
+                              "oklch(0.16 0.06 295)";
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!current)
+                            (e.currentTarget as HTMLElement).style.background =
+                              "transparent";
+                        }}
                       >
                         {done ? (
-                          <CheckCircle className="h-3.5 w-3.5 shrink-0" style={{ color: "oklch(0.52 0.14 165)" }} />
+                          <CheckCircle
+                            className="h-3.5 w-3.5 shrink-0"
+                            style={{ color: "oklch(0.60 0.18 155)" }}
+                          />
                         ) : (
                           <div
-                            className={`h-3.5 w-3.5 shrink-0 rounded-full border-2 ${current ? "border-primary" : "border-muted-foreground/40"}`}
+                            className="h-3.5 w-3.5 shrink-0 rounded-full border-2"
+                            style={{
+                              borderColor: current
+                                ? "oklch(0.72 0.22 295)"
+                                : "oklch(0.38 0.06 295)",
+                            }}
                           />
                         )}
                         <span className="truncate text-xs">{l.title}</span>
@@ -416,14 +496,20 @@ export default function LessonPage({ courseId, lessonId }: LessonPageProps) {
         </div>
       </main>
 
-      <footer className="border-t border-border py-6 mt-8">
-        <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
-          &copy; 2026. Built with love using{" "}
+      <footer
+        className="py-6 mt-8"
+        style={{ borderTop: "1px solid oklch(0.20 0.06 295)" }}
+      >
+        <div
+          className="container mx-auto px-4 text-center text-xs"
+          style={{ color: "oklch(0.40 0.05 295)" }}
+        >
+          &copy; {new Date().getFullYear()}. Built with ♥ using{" "}
           <a
-            href="https://caffeine.ai"
+            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline underline-offset-2"
+            className="underline underline-offset-2 hover:opacity-80"
           >
             caffeine.ai
           </a>

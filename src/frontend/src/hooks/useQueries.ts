@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useActor } from "./useActor";
-import { ApprovalStatus, UserRole } from "../backend.d";
 import type { Principal } from "@icp-sdk/core/principal";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApprovalStatus, UserRole } from "../backend.d";
+import { useActor } from "./useActor";
 
 export function useUserProfile() {
   const { actor, isFetching } = useActor();
@@ -9,9 +9,16 @@ export function useUserProfile() {
     queryKey: ["userProfile"],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getCallerUserProfile();
+      try {
+        return await actor.getCallerUserProfile();
+      } catch {
+        return null;
+      }
     },
-    enabled: !!actor && !isFetching,
+    // Run the query once actor is ready OR once actor stops fetching (handles actor init failures)
+    enabled: !isFetching,
+    // Retry once on failure to handle transient errors
+    retry: 1,
   });
 }
 
@@ -21,9 +28,14 @@ export function useIsAdmin() {
     queryKey: ["isAdmin"],
     queryFn: async () => {
       if (!actor) return false;
-      return actor.isCallerAdmin();
+      try {
+        return await actor.isCallerAdmin();
+      } catch {
+        return false;
+      }
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
+    retry: 1,
   });
 }
 
@@ -33,9 +45,14 @@ export function useIsApproved() {
     queryKey: ["isApproved"],
     queryFn: async () => {
       if (!actor) return false;
-      return actor.isCallerApproved();
+      try {
+        return await actor.isCallerApproved();
+      } catch {
+        return false;
+      }
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
+    retry: 1,
   });
 }
 
@@ -70,8 +87,12 @@ export function useRequestApproval() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      if (!actor) throw new Error("Not connected");
-      await actor.requestApproval();
+      if (!actor) return; // silently skip if no actor
+      try {
+        await actor.requestApproval();
+      } catch {
+        // Silently ignore — user may not have a role yet, or may already be admin
+      }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["isApproved"] });

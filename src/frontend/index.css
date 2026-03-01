@@ -1,4 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@font-face {
+  font-family: 'Outfit';
+  src: url('/assets/fonts/Outfit-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/assets/fonts/Fraunces-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
 
 @tailwind base;
 @tailwind components;
@@ -6,105 +17,65 @@
 
 @layer base {
   :root {
-    --radius: 0.375rem;
+    --radius: 0.5rem;
 
-    /* Navy blue corporate palette */
-    --background: 0.98 0.004 245;
-    --foreground: 0.18 0.025 255;
+    /* Deep Cosmos / Constellation theme — permanent dark */
+    --background: 0.10 0.04 295;
+    --foreground: 0.93 0.02 295;
 
-    --card: 1 0 0;
-    --card-foreground: 0.18 0.025 255;
+    --card: 0.14 0.05 295;
+    --card-foreground: 0.93 0.02 295;
 
-    --popover: 1 0 0;
-    --popover-foreground: 0.18 0.025 255;
+    --popover: 0.16 0.06 295;
+    --popover-foreground: 0.93 0.02 295;
 
-    /* Deep navy primary */
-    --primary: 0.28 0.085 255;
+    --primary: 0.62 0.22 295;
     --primary-foreground: 0.99 0 0;
 
-    /* Mid blue secondary */
-    --secondary: 0.95 0.012 245;
-    --secondary-foreground: 0.28 0.085 255;
+    --secondary: 0.20 0.07 295;
+    --secondary-foreground: 0.82 0.06 295;
 
-    --muted: 0.96 0.006 245;
-    --muted-foreground: 0.52 0.028 255;
+    --muted: 0.18 0.05 295;
+    --muted-foreground: 0.58 0.06 295;
 
-    /* Blue accent */
-    --accent: 0.42 0.15 255;
+    --accent: 0.55 0.25 310;
     --accent-foreground: 0.99 0 0;
 
-    --destructive: 0.577 0.245 27.325;
-    --destructive-foreground: 0.985 0 0;
+    --destructive: 0.65 0.22 27;
+    --destructive-foreground: 0.99 0 0;
 
-    --success: 0.52 0.14 165;
+    --success: 0.60 0.18 155;
     --success-foreground: 0.99 0 0;
 
     --warning: 0.72 0.16 80;
     --warning-foreground: 0.18 0 0;
 
-    --border: 0.88 0.018 255;
-    --input: 0.92 0.012 255;
-    --ring: 0.42 0.15 255;
+    --border: 0.24 0.07 295;
+    --input: 0.20 0.06 295;
+    --ring: 0.62 0.22 295;
 
-    --chart-1: 0.42 0.15 255;
-    --chart-2: 0.52 0.14 165;
-    --chart-3: 0.28 0.085 255;
+    --chart-1: 0.62 0.22 295;
+    --chart-2: 0.55 0.25 310;
+    --chart-3: 0.72 0.18 295;
     --chart-4: 0.72 0.16 80;
-    --chart-5: 0.577 0.245 27.325;
+    --chart-5: 0.65 0.22 27;
 
-    --sidebar: 0.22 0.065 258;
-    --sidebar-foreground: 0.95 0.012 245;
-    --sidebar-primary: 0.99 0 0;
-    --sidebar-primary-foreground: 0.22 0.065 258;
-    --sidebar-accent: 0.30 0.08 258;
-    --sidebar-accent-foreground: 0.95 0.012 245;
-    --sidebar-border: 0.32 0.07 258;
-    --sidebar-ring: 0.55 0.15 255;
-
-    /* Custom app tokens */
-    --navy-deep: 0.22 0.065 258;
-    --navy-mid: 0.34 0.115 258;
-    --navy-light: 0.48 0.14 258;
-    --navy-pale: 0.92 0.025 258;
-  }
-
-  .dark {
-    --background: 0.14 0.035 258;
-    --foreground: 0.95 0.012 245;
-
-    --card: 0.19 0.045 258;
-    --card-foreground: 0.95 0.012 245;
-
-    --popover: 0.22 0.055 258;
-    --popover-foreground: 0.95 0.012 245;
-
-    --primary: 0.65 0.18 255;
-    --primary-foreground: 0.12 0.03 258;
-
-    --secondary: 0.25 0.06 258;
-    --secondary-foreground: 0.85 0.018 245;
-
-    --muted: 0.25 0.055 258;
-    --muted-foreground: 0.62 0.028 255;
-
-    --accent: 0.55 0.18 255;
-    --accent-foreground: 0.99 0 0;
-
-    --destructive: 0.704 0.191 22.216;
-    --destructive-foreground: 0.205 0 0;
-
-    --border: 1 0 0 / 10%;
-    --input: 1 0 0 / 15%;
-    --ring: 0.55 0.18 255;
-
-    --sidebar: 0.16 0.04 258;
-    --sidebar-foreground: 0.92 0.015 245;
-    --sidebar-primary: 0.65 0.18 255;
+    --sidebar: 0.12 0.05 295;
+    --sidebar-foreground: 0.93 0.02 295;
+    --sidebar-primary: 0.62 0.22 295;
     --sidebar-primary-foreground: 0.99 0 0;
-    --sidebar-accent: 0.22 0.055 258;
-    --sidebar-accent-foreground: 0.85 0.018 245;
-    --sidebar-border: 1 0 0 / 10%;
-    --sidebar-ring: 0.55 0.18 255;
+    --sidebar-accent: 0.20 0.08 295;
+    --sidebar-accent-foreground: 0.82 0.06 295;
+    --sidebar-border: 0.24 0.07 295;
+    --sidebar-ring: 0.62 0.22 295;
+
+    /* Custom cosmos tokens */
+    --cosmos-deep: 0.10 0.04 295;
+    --cosmos-mid: 0.18 0.08 295;
+    --cosmos-bright: 0.62 0.22 295;
+    --cosmos-glow: 0.72 0.18 295;
+    --cosmos-accent: 0.55 0.25 310;
+    --cosmos-star: 0.92 0.04 295;
   }
 
   * {
@@ -130,29 +101,47 @@
   }
 
   .lesson-progress-fill {
-    @apply h-full rounded-full bg-accent transition-all duration-1000 ease-linear;
+    @apply h-full rounded-full bg-primary transition-all duration-1000 ease-linear;
   }
 
+  /* Star shimmer animation */
+  @keyframes star-pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+
+  .star-1 { animation: star-pulse 3s ease-in-out infinite; }
+  .star-2 { animation: star-pulse 4.5s ease-in-out infinite 1s; }
+  .star-3 { animation: star-pulse 2.8s ease-in-out infinite 2s; }
+
+  /* Cosmos glow */
+  .cosmos-glow {
+    box-shadow: 0 0 20px oklch(0.62 0.22 295 / 0.3), 0 0 60px oklch(0.62 0.22 295 / 0.1);
+  }
+
+  /* Status badges — cosmos dark mode */
   .status-badge-pending {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
-    background: oklch(0.96 0.04 80);
-    color: oklch(0.45 0.14 60);
+    background: oklch(0.28 0.08 80);
+    color: oklch(0.82 0.14 80);
   }
 
   .status-badge-approved {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
-    background: oklch(0.94 0.05 165);
-    color: oklch(0.38 0.14 165);
+    background: oklch(0.22 0.08 155);
+    color: oklch(0.72 0.18 155);
   }
 
   .status-badge-rejected {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
-    background: oklch(0.95 0.04 27);
-    color: oklch(0.45 0.18 27);
+    background: oklch(0.22 0.08 27);
+    color: oklch(0.72 0.18 27);
   }
 
+  /* Certificate cosmos style */
   .certificate-page {
-    background: linear-gradient(135deg, oklch(0.98 0.008 258) 0%, oklch(1 0 0) 50%, oklch(0.98 0.008 258) 100%);
+    background: radial-gradient(ellipse at 20% 50%, oklch(0.16 0.08 295) 0%, oklch(0.10 0.04 295) 60%),
+      radial-gradient(ellipse at 80% 20%, oklch(0.14 0.07 310) 0%, transparent 50%);
   }
 
   /* Page enter animation */
@@ -204,17 +193,11 @@
   /* Video overlay */
   .video-overlay {
     @apply absolute inset-0 flex flex-col items-center justify-center;
-    background: linear-gradient(to bottom, transparent 0%, oklch(0.08 0.03 258 / 0.7) 100%);
+    background: linear-gradient(to bottom, transparent 0%, oklch(0.08 0.04 295 / 0.7) 100%);
     pointer-events: none;
   }
 
   .video-overlay.interactive {
     pointer-events: auto;
-  }
-
-  /* Navy sidebar */
-  .admin-sidebar {
-    background: oklch(var(--navy-deep));
-    color: oklch(var(--sidebar-foreground));
   }
 }

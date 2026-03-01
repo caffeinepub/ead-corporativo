@@ -1,32 +1,32 @@
-import { useEffect, useState } from "react";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import {
+  Award,
+  CheckCircle,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Lock,
+  PlayCircle,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { navigate } from "../App";
 import AppHeader from "../components/AppHeader";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useUserProfile } from "../hooks/useQueries";
 import {
-  getCourse,
   calculateCourseProgress,
-  getProgress,
-  getCertificateForStudent,
-  saveCertificate,
   generateCertCode,
+  getCertificateForStudent,
+  getCourse,
+  getProgress,
   isCourseComplete,
+  saveCertificate,
 } from "../lib/ead-storage";
-import { navigate } from "../App";
 import type { Course, Module } from "../lib/ead-types";
-import {
-  ChevronLeft,
-  Lock,
-  CheckCircle,
-  PlayCircle,
-  Clock,
-  Award,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react";
-import { toast } from "sonner";
 
 interface CoursePageProps {
   courseId: string;
@@ -44,7 +44,9 @@ export default function CoursePage({ courseId }: CoursePageProps) {
   const { data: profile } = useUserProfile();
 
   const [course, setCourse] = useState<Course | null>(null);
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(
+    new Set(),
+  );
   const [certIssued, setCertIssued] = useState(false);
 
   useEffect(() => {
@@ -52,7 +54,6 @@ export default function CoursePage({ courseId }: CoursePageProps) {
     const c = getCourse(courseId);
     setCourse(c);
     if (c) {
-      // Expand all modules by default
       setExpandedModules(new Set(c.modules.map((m) => m.id)));
     }
   }, [courseId]);
@@ -62,7 +63,6 @@ export default function CoursePage({ courseId }: CoursePageProps) {
     const cert = getCertificateForStudent(principal, course.id);
     setCertIssued(!!cert);
 
-    // Auto-issue certificate if course complete and not yet issued
     if (isCourseComplete(principal, course) && !cert && profile?.name) {
       const code = generateCertCode(principal, course.id);
       saveCertificate({
@@ -75,7 +75,7 @@ export default function CoursePage({ courseId }: CoursePageProps) {
         principalId: principal,
       });
       setCertIssued(true);
-      toast.success("Parabens! Seu certificado foi emitido.");
+      toast.success("Parabéns! Seu certificado foi emitido.");
     }
   }, [course, principal, profile]);
 
@@ -83,7 +83,10 @@ export default function CoursePage({ courseId }: CoursePageProps) {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader userName={profile?.name} />
-        <main className="container mx-auto px-4 py-8 text-center text-muted-foreground">
+        <main
+          className="container mx-auto px-4 py-8 text-center"
+          style={{ color: "oklch(0.58 0.06 295)" }}
+        >
           Curso não encontrado.
         </main>
       </div>
@@ -94,7 +97,7 @@ export default function CoursePage({ courseId }: CoursePageProps) {
   const lessonProgress = getProgress(principal);
   const totalLessons = course.modules.reduce(
     (sum, m) => sum + m.lessons.length,
-    0
+    0,
   );
 
   const toggleModule = (moduleId: string) => {
@@ -109,7 +112,6 @@ export default function CoursePage({ courseId }: CoursePageProps) {
     });
   };
 
-  // Find first incomplete lesson
   let firstIncomplete: { courseId: string; lessonId: string } | null = null;
   for (const mod of course.modules) {
     for (const lesson of mod.lessons) {
@@ -121,8 +123,10 @@ export default function CoursePage({ courseId }: CoursePageProps) {
     if (firstIncomplete) break;
   }
 
-  // Check sequential unlock
-  const isLessonUnlocked = (moduleIndex: number, lessonIndex: number): boolean => {
+  const isLessonUnlocked = (
+    moduleIndex: number,
+    lessonIndex: number,
+  ): boolean => {
     if (moduleIndex === 0 && lessonIndex === 0) return true;
     let prevLesson: { id: string } | null = null;
     if (lessonIndex > 0) {
@@ -143,7 +147,8 @@ export default function CoursePage({ courseId }: CoursePageProps) {
         <button
           type="button"
           onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+          className="flex items-center gap-1.5 text-sm mb-6 transition-opacity hover:opacity-70"
+          style={{ color: "oklch(0.58 0.06 295)" }}
         >
           <ChevronLeft className="h-4 w-4" />
           Meus cursos
@@ -152,21 +157,26 @@ export default function CoursePage({ courseId }: CoursePageProps) {
         {/* Course header */}
         <div className="mb-8 page-enter">
           <h1
-            className="text-2xl font-semibold tracking-tight mb-2"
-            style={{ color: "oklch(var(--navy-deep))" }}
+            className="text-2xl font-display font-semibold tracking-tight mb-2"
+            style={{ color: "oklch(0.93 0.02 295)" }}
           >
             {course.title}
           </h1>
-          <p className="text-sm text-muted-foreground mb-4">{course.description}</p>
+          <p className="text-sm mb-4" style={{ color: "oklch(0.58 0.06 295)" }}>
+            {course.description}
+          </p>
 
           {/* Progress overview */}
           <div
-            className="rounded-lg p-4 flex items-center justify-between gap-4"
-            style={{ background: "oklch(var(--navy-pale))" }}
+            className="rounded-xl p-4 flex items-center justify-between gap-4"
+            style={{
+              background: "oklch(0.14 0.05 295)",
+              border: "1px solid oklch(0.24 0.07 295)",
+            }}
           >
             <div className="flex-1">
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-muted-foreground">
+                <span style={{ color: "oklch(0.58 0.06 295)" }}>
                   {progress.completed} de {totalLessons} aulas concluídas
                 </span>
                 <span
@@ -174,8 +184,8 @@ export default function CoursePage({ courseId }: CoursePageProps) {
                   style={{
                     color:
                       progress.percentage === 100
-                        ? "oklch(0.52 0.14 165)"
-                        : "oklch(var(--navy-mid))",
+                        ? "oklch(0.60 0.18 155)"
+                        : "oklch(0.72 0.18 295)",
                   }}
                 >
                   {progress.percentage}%
@@ -188,8 +198,8 @@ export default function CoursePage({ courseId }: CoursePageProps) {
                 variant="outline"
                 className="border-none shrink-0"
                 style={{
-                  background: "oklch(0.94 0.05 165)",
-                  color: "oklch(0.38 0.14 165)",
+                  background: "oklch(0.22 0.08 155)",
+                  color: "oklch(0.72 0.18 155)",
                 }}
               >
                 <CheckCircle className="h-3.5 w-3.5 mr-1" />
@@ -204,10 +214,12 @@ export default function CoursePage({ courseId }: CoursePageProps) {
           {firstIncomplete && (
             <Button
               onClick={() =>
-                navigate(`/lesson/${firstIncomplete!.courseId}/${firstIncomplete!.lessonId}`)
+                navigate(
+                  `/lesson/${firstIncomplete!.courseId}/${firstIncomplete!.lessonId}`,
+                )
               }
-              style={{ background: "oklch(var(--navy-deep))", color: "white" }}
-              className="gap-2"
+              className="gap-2 cosmos-glow"
+              style={{ background: "oklch(0.62 0.22 295)", color: "white" }}
             >
               <PlayCircle className="h-4 w-4" />
               {progress.completed === 0 ? "Iniciar curso" : "Continuar"}
@@ -218,6 +230,11 @@ export default function CoursePage({ courseId }: CoursePageProps) {
               variant="outline"
               onClick={() => navigate(`/certificate/${course.id}`)}
               className="gap-2"
+              style={{
+                borderColor: "oklch(0.32 0.10 295)",
+                color: "oklch(0.72 0.18 295)",
+                background: "transparent",
+              }}
             >
               <Award className="h-4 w-4" />
               Ver certificado
@@ -229,55 +246,86 @@ export default function CoursePage({ courseId }: CoursePageProps) {
         <div className="space-y-3">
           {course.modules.map((module: Module, modIdx: number) => {
             const modCompleted = module.lessons.every(
-              (l) => lessonProgress[l.id]?.completed
+              (l) => lessonProgress[l.id]?.completed,
             );
             const isExpanded = expandedModules.has(module.id);
 
             return (
               <div
                 key={module.id}
-                className="rounded-lg border border-border overflow-hidden bg-card"
-                style={{ boxShadow: "0 1px 3px oklch(0.22 0.065 258 / 0.06)" }}
+                className="rounded-xl overflow-hidden"
+                style={{
+                  background: "oklch(0.14 0.05 295)",
+                  border: "1px solid oklch(0.24 0.07 295)",
+                }}
               >
                 {/* Module header */}
                 <button
                   type="button"
                   onClick={() => toggleModule(module.id)}
-                  className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+                  className="w-full flex items-center justify-between px-4 py-3.5 text-left transition-colors"
+                  style={{
+                    background: isExpanded
+                      ? "oklch(0.16 0.06 295)"
+                      : "transparent",
+                  }}
                 >
                   <div className="flex items-center gap-3">
                     {modCompleted ? (
-                      <CheckCircle className="h-4 w-4 shrink-0 text-success-DEFAULT" style={{ color: "oklch(0.52 0.14 165)" }} />
+                      <CheckCircle
+                        className="h-4 w-4 shrink-0"
+                        style={{ color: "oklch(0.60 0.18 155)" }}
+                      />
                     ) : (
                       <div
                         className="h-4 w-4 shrink-0 rounded-full border-2"
-                        style={{ borderColor: "oklch(var(--navy-mid))" }}
+                        style={{ borderColor: "oklch(0.42 0.12 295)" }}
                       />
                     )}
-                    <span className="font-medium text-sm">{module.title}</span>
+                    <span
+                      className="font-medium text-sm"
+                      style={{ color: "oklch(0.90 0.02 295)" }}
+                    >
+                      {module.title}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {module.lessons.filter((l) => lessonProgress[l.id]?.completed).length}/
-                      {module.lessons.length}
+                    <span
+                      className="text-xs"
+                      style={{ color: "oklch(0.52 0.06 295)" }}
+                    >
+                      {
+                        module.lessons.filter(
+                          (l) => lessonProgress[l.id]?.completed,
+                        ).length
+                      }
+                      /{module.lessons.length}
                     </span>
                     {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <ChevronDown
+                        className="h-4 w-4"
+                        style={{ color: "oklch(0.52 0.06 295)" }}
+                      />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight
+                        className="h-4 w-4"
+                        style={{ color: "oklch(0.52 0.06 295)" }}
+                      />
                     )}
                   </div>
                 </button>
 
                 {/* Lessons */}
                 {isExpanded && (
-                  <div className="border-t border-border divide-y divide-border">
+                  <div style={{ borderTop: "1px solid oklch(0.22 0.07 295)" }}>
                     {module.lessons.map((lesson, lesIdx) => {
                       const lp = lessonProgress[lesson.id];
                       const isCompleted = lp?.completed ?? false;
                       const unlocked = isLessonUnlocked(modIdx, lesIdx);
                       const pct = lp
-                        ? Math.round((lp.secondsWatched / lesson.duration) * 100)
+                        ? Math.round(
+                            (lp.secondsWatched / lesson.duration) * 100,
+                          )
                         : 0;
 
                       return (
@@ -288,21 +336,51 @@ export default function CoursePage({ courseId }: CoursePageProps) {
                           onClick={() =>
                             navigate(`/lesson/${course.id}/${lesson.id}`)
                           }
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          style={{
+                            borderTop:
+                              lesIdx > 0
+                                ? "1px solid oklch(0.20 0.06 295)"
+                                : undefined,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (unlocked)
+                              (
+                                e.currentTarget as HTMLElement
+                              ).style.background = "oklch(0.18 0.07 295)";
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLElement).style.background =
+                              "transparent";
+                          }}
                         >
                           {/* Status icon */}
                           <div className="shrink-0">
                             {!unlocked ? (
-                              <Lock className="h-4 w-4 text-muted-foreground/50" />
+                              <Lock
+                                className="h-4 w-4"
+                                style={{ color: "oklch(0.40 0.06 295)" }}
+                              />
                             ) : isCompleted ? (
-                              <CheckCircle className="h-4 w-4" style={{ color: "oklch(0.52 0.14 165)" }} />
+                              <CheckCircle
+                                className="h-4 w-4"
+                                style={{ color: "oklch(0.60 0.18 155)" }}
+                              />
                             ) : (
-                              <PlayCircle className="h-4 w-4" style={{ color: "oklch(var(--navy-mid))" }} />
+                              <PlayCircle
+                                className="h-4 w-4"
+                                style={{ color: "oklch(0.62 0.22 295)" }}
+                              />
                             )}
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{lesson.title}</p>
+                            <p
+                              className="text-sm font-medium truncate"
+                              style={{ color: "oklch(0.85 0.04 295)" }}
+                            >
+                              {lesson.title}
+                            </p>
                             {lp && !isCompleted && (
                               <div className="mt-1">
                                 <div className="lesson-progress-track">
@@ -311,14 +389,20 @@ export default function CoursePage({ courseId }: CoursePageProps) {
                                     style={{ width: `${pct}%` }}
                                   />
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-0.5">
+                                <p
+                                  className="text-xs mt-0.5"
+                                  style={{ color: "oklch(0.52 0.06 295)" }}
+                                >
                                   {pct}% assistido
                                 </p>
                               </div>
                             )}
                           </div>
 
-                          <div className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground">
+                          <div
+                            className="shrink-0 flex items-center gap-1 text-xs"
+                            style={{ color: "oklch(0.48 0.06 295)" }}
+                          >
                             <Clock className="h-3 w-3" />
                             {formatDuration(lesson.duration)}
                           </div>
@@ -333,14 +417,20 @@ export default function CoursePage({ courseId }: CoursePageProps) {
         </div>
       </main>
 
-      <footer className="border-t border-border py-6 mt-16">
-        <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
-          &copy; 2026. Built with love using{" "}
+      <footer
+        className="py-6 mt-16"
+        style={{ borderTop: "1px solid oklch(0.20 0.06 295)" }}
+      >
+        <div
+          className="container mx-auto px-4 text-center text-xs"
+          style={{ color: "oklch(0.40 0.05 295)" }}
+        >
+          &copy; {new Date().getFullYear()}. Built with ♥ using{" "}
           <a
-            href="https://caffeine.ai"
+            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-foreground"
+            className="underline underline-offset-2 hover:opacity-80"
           >
             caffeine.ai
           </a>

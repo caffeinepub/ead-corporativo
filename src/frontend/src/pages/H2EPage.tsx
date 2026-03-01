@@ -1,14 +1,3 @@
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,6 +40,7 @@ interface Product {
 }
 
 interface WithdrawalItem {
+  productId?: number;
   productName: string;
   quantity: number;
 }
@@ -511,9 +501,15 @@ export default function H2EPage() {
   // ── Deletar produto ──────────────────────────────────────────────────────────
   const handleDelete = useCallback(
     (id: number, name: string) => {
+      if (
+        !window.confirm(`Excluir "${name}"? Esta ação não pode ser desfeita.`)
+      )
+        return;
       setProducts((prev) => prev.filter((p) => p.id !== id));
       // Remove from pending withdrawal if listed
-      setPendingItems((prev) => prev.filter((i) => i.productName !== name));
+      setPendingItems((prev) =>
+        prev.filter((i) => i.productId !== id && i.productName !== name),
+      );
       if (withdrawSelectId === String(id)) setWithdrawSelectId("");
       toast.success(`Produto "${name}" excluído.`);
     },
@@ -522,10 +518,10 @@ export default function H2EPage() {
 
   // ── Adicionar item à lista de retirada ───────────────────────────────────────
   const handleAddWithdrawItem = useCallback(() => {
-    const id = Number.parseInt(withdrawSelectId, 10);
+    const idNum = Number.parseInt(withdrawSelectId, 10);
     const qty = Number.parseInt(withdrawItemQty, 10);
 
-    if (!withdrawSelectId) {
+    if (!withdrawSelectId || Number.isNaN(idNum)) {
       toast.error("Selecione um produto para adicionar.");
       return;
     }
@@ -534,35 +530,37 @@ export default function H2EPage() {
       return;
     }
 
-    const product = products.find((p) => p.id === id);
+    // Always find by numeric id to avoid name mismatch
+    const product = products.find((p) => p.id === idNum);
     if (!product) {
       toast.error("Produto não encontrado.");
       return;
     }
 
-    // Calculate already-pending quantity for this product
+    // Calculate already-pending quantity for this product (by id, not name)
     const alreadyPending = pendingItems
-      .filter((i) => i.productName === product.name)
+      .filter((i) => i.productId === idNum)
       .reduce((a, i) => a + i.quantity, 0);
 
     if (qty + alreadyPending > product.quantity) {
       toast.error("Quantidade insuficiente em estoque.", {
-        description: `Disponível: ${product.quantity - alreadyPending} un. (${alreadyPending > 0 ? `${alreadyPending} já adicionadas` : ""})`,
+        description: `Disponível: ${product.quantity - alreadyPending} un.${alreadyPending > 0 ? ` (${alreadyPending} já adicionadas)` : ""}`,
       });
       return;
     }
 
-    // Merge with existing pending item for same product
+    // Merge with existing pending item for same product id
     setPendingItems((prev) => {
-      const existing = prev.find((i) => i.productName === product.name);
+      const existing = prev.find((i) => i.productId === idNum);
       if (existing) {
         return prev.map((i) =>
-          i.productName === product.name
-            ? { ...i, quantity: i.quantity + qty }
-            : i,
+          i.productId === idNum ? { ...i, quantity: i.quantity + qty } : i,
         );
       }
-      return [...prev, { productName: product.name, quantity: qty }];
+      return [
+        ...prev,
+        { productId: idNum, productName: product.name, quantity: qty },
+      ];
     });
 
     setWithdrawSelectId("");
@@ -595,10 +593,14 @@ export default function H2EPage() {
 
     setFinalizeLoading(true);
 
-    // Deduct quantities from stock
+    // Deduct quantities from stock (match by id when available, fallback to name)
     setProducts((prev) =>
       prev.map((p) => {
-        const item = itemsSnapshot.find((i) => i.productName === p.name);
+        const item = itemsSnapshot.find((i) =>
+          i.productId !== undefined
+            ? i.productId === p.id
+            : i.productName === p.name,
+        );
         if (!item) return p;
         return { ...p, quantity: p.quantity - item.quantity };
       }),
@@ -631,6 +633,10 @@ export default function H2EPage() {
 
   // ── Deletar registro de retirada ─────────────────────────────────────────────
   const handleDeleteWithdrawal = useCallback((id: number) => {
+    if (
+      !window.confirm("Excluir este registro? O estoque não será restaurado.")
+    )
+      return;
     setWithdrawals((prev) => prev.filter((w) => w.id !== id));
     toast.success("Registro de retirada excluído.");
   }, []);
@@ -1096,89 +1102,18 @@ export default function H2EPage() {
                                 </span>
                               </TableCell>
                               <TableCell className="text-center pr-6 py-3">
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
-                                      style={{
-                                        color: "oklch(0.65 0.18 27)",
-                                      }}
-                                      aria-label={`Excluir ${product.name}`}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent
-                                    style={{
-                                      background: "oklch(0.14 0.06 295)",
-                                      border:
-                                        "1px solid oklch(0.28 0.10 295 / 0.8)",
-                                      color: "oklch(0.92 0.04 295)",
-                                    }}
-                                  >
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle
-                                        style={{
-                                          color: "oklch(0.92 0.04 295)",
-                                        }}
-                                      >
-                                        Excluir produto?
-                                      </AlertDialogTitle>
-                                      <AlertDialogDescription
-                                        style={{
-                                          color: "oklch(0.65 0.08 295)",
-                                        }}
-                                      >
-                                        Tem certeza que deseja excluir{" "}
-                                        <strong
-                                          style={{
-                                            color: "oklch(0.82 0.14 295)",
-                                          }}
-                                        >
-                                          "{product.name}"
-                                        </strong>{" "}
-                                        com{" "}
-                                        <strong
-                                          style={{
-                                            color: "oklch(0.82 0.14 295)",
-                                          }}
-                                        >
-                                          {product.quantity}
-                                        </strong>{" "}
-                                        unidade(s) em estoque? Esta ação não
-                                        pode ser desfeita.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel
-                                        style={{
-                                          background:
-                                            "oklch(0.18 0.06 295 / 0.8)",
-                                          border:
-                                            "1px solid oklch(0.28 0.08 295 / 0.6)",
-                                          color: "oklch(0.82 0.08 295)",
-                                        }}
-                                      >
-                                        Cancelar
-                                      </AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() =>
-                                          handleDelete(product.id, product.name)
-                                        }
-                                        style={{
-                                          background:
-                                            "linear-gradient(135deg, oklch(0.45 0.22 27), oklch(0.55 0.20 15))",
-                                          color: "white",
-                                          border: "none",
-                                        }}
-                                      >
-                                        Sim, excluir
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    handleDelete(product.id, product.name)
+                                  }
+                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                                  style={{ color: "oklch(0.65 0.18 27)" }}
+                                  aria-label={`Excluir ${product.name}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </TableCell>
                             </tr>
                           ))}
@@ -1304,7 +1239,11 @@ export default function H2EPage() {
                             .filter((p) => p.quantity > 0)
                             .map((p) => {
                               const alreadyPending = pendingItems
-                                .filter((i) => i.productName === p.name)
+                                .filter((i) =>
+                                  i.productId !== undefined
+                                    ? i.productId === p.id
+                                    : i.productName === p.name,
+                                )
                                 .reduce((a, i) => a + i.quantity, 0);
                               const available = p.quantity - alreadyPending;
                               return (
@@ -1749,94 +1688,20 @@ export default function H2EPage() {
                                           <FileSignature className="h-3.5 w-3.5" />
                                           Relatório
                                         </Button>
-                                        <AlertDialog>
-                                          <AlertDialogTrigger asChild>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
-                                              style={{
-                                                color: "oklch(0.65 0.18 27)",
-                                              }}
-                                              aria-label="Excluir registro"
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5" />
-                                            </Button>
-                                          </AlertDialogTrigger>
-                                          <AlertDialogContent
-                                            style={{
-                                              background:
-                                                "oklch(0.14 0.06 295)",
-                                              border:
-                                                "1px solid oklch(0.28 0.10 295 / 0.8)",
-                                              color: "oklch(0.92 0.04 295)",
-                                            }}
-                                          >
-                                            <AlertDialogHeader>
-                                              <AlertDialogTitle
-                                                style={{
-                                                  color: "oklch(0.92 0.04 295)",
-                                                }}
-                                              >
-                                                Excluir registro?
-                                              </AlertDialogTitle>
-                                              <AlertDialogDescription
-                                                style={{
-                                                  color: "oklch(0.65 0.08 295)",
-                                                }}
-                                              >
-                                                Deseja excluir o registro da
-                                                retirada de{" "}
-                                                <strong
-                                                  style={{
-                                                    color:
-                                                      "oklch(0.82 0.14 295)",
-                                                  }}
-                                                >
-                                                  {record.beneficiaryName}
-                                                </strong>
-                                                ? O estoque{" "}
-                                                <strong
-                                                  style={{
-                                                    color:
-                                                      "oklch(0.72 0.20 27)",
-                                                  }}
-                                                >
-                                                  não será restaurado
-                                                </strong>
-                                                .
-                                              </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                              <AlertDialogCancel
-                                                style={{
-                                                  background:
-                                                    "oklch(0.18 0.06 295 / 0.8)",
-                                                  border:
-                                                    "1px solid oklch(0.28 0.08 295 / 0.6)",
-                                                  color: "oklch(0.82 0.08 295)",
-                                                }}
-                                              >
-                                                Cancelar
-                                              </AlertDialogCancel>
-                                              <AlertDialogAction
-                                                onClick={() =>
-                                                  handleDeleteWithdrawal(
-                                                    record.id,
-                                                  )
-                                                }
-                                                style={{
-                                                  background:
-                                                    "linear-gradient(135deg, oklch(0.45 0.22 27), oklch(0.55 0.20 15))",
-                                                  color: "white",
-                                                  border: "none",
-                                                }}
-                                              >
-                                                Sim, excluir
-                                              </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                          </AlertDialogContent>
-                                        </AlertDialog>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() =>
+                                            handleDeleteWithdrawal(record.id)
+                                          }
+                                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                                          style={{
+                                            color: "oklch(0.65 0.18 27)",
+                                          }}
+                                          aria-label="Excluir registro"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
                                       </div>
                                     </TableCell>
                                   </tr>

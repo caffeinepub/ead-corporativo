@@ -589,42 +589,44 @@ export default function H2EPage() {
       return;
     }
 
+    // Capture values before any state updates
+    const itemsSnapshot = [...pendingItems];
+    const itemCount = itemsSnapshot.length;
+
     setFinalizeLoading(true);
-    setTimeout(() => {
-      // Deduct quantities from stock
-      setProducts((prev) => {
-        const updated = prev.map((p) => {
-          const item = pendingItems.find((i) => i.productName === p.name);
-          if (!item) return p;
-          return { ...p, quantity: p.quantity - item.quantity };
-        });
-        return updated;
-      });
 
-      // Save withdrawal record
-      const record: WithdrawalRecord = {
-        id: 0, // placeholder, set below
-        beneficiaryName: name,
-        date: new Date().toISOString(),
-        items: [...pendingItems],
-      };
+    // Deduct quantities from stock
+    setProducts((prev) =>
+      prev.map((p) => {
+        const item = itemsSnapshot.find((i) => i.productName === p.name);
+        if (!item) return p;
+        return { ...p, quantity: p.quantity - item.quantity };
+      }),
+    );
 
-      setWithdrawals((prev) => {
-        const newRecord = { ...record, id: nextId(prev) };
-        return [newRecord, ...prev];
-      });
+    // Save withdrawal record
+    const newRecord: WithdrawalRecord = {
+      id: 0, // will be replaced below
+      beneficiaryName: name,
+      date: new Date().toISOString(),
+      items: itemsSnapshot,
+    };
 
-      // Reset form
-      setBeneficiaryName("");
-      setPendingItems([]);
-      setWithdrawSelectId("");
-      setWithdrawItemQty("");
-      setFinalizeLoading(false);
+    setWithdrawals((prev) => {
+      const withId = { ...newRecord, id: nextId(prev) };
+      return [withId, ...prev];
+    });
 
-      toast.success("Retirada finalizada com sucesso!", {
-        description: `${pendingItems.length} item(ns) retirado(s) para ${name}.`,
-      });
-    }, 400);
+    // Reset form
+    setBeneficiaryName("");
+    setPendingItems([]);
+    setWithdrawSelectId("");
+    setWithdrawItemQty("");
+    setFinalizeLoading(false);
+
+    toast.success("Retirada finalizada com sucesso!", {
+      description: `${itemCount} item(ns) retirado(s) para ${name}.`,
+    });
   }, [beneficiaryName, pendingItems]);
 
   // ── Deletar registro de retirada ─────────────────────────────────────────────
